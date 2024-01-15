@@ -127,11 +127,18 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        public void OnPlayerDeath(string causeOfDeath_Name) {
+        public void OnPlayerDeath(string causeOfDeath_Name, ulong playerId = ulong.MaxValue) {
+            var localPlayerId = GameNetworkManager.Instance.localPlayerController.playerClientId;
+            bool validPlayer = localPlayerId == playerId;
+            if (!validPlayer)
+                return;
+            //prawdopodobnie trzeba będzie przekazać też tutaj ID gracza i sprawdzić czy jest równe ID lokalnego gracza i dopiero wtedy dodać
             if (!causesOfDeath.TryGetValue(causeOfDeath_Name, out int count)) {
                 causesOfDeath[causeOfDeath_Name] = 1;
+                StatTrackerMod.Logger.LogMessage($"first death by: {causeOfDeath_Name}");
             } else {
                 causesOfDeath[causeOfDeath_Name] = count + 1;
+                StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {count+1}, old: {count}");
             }
         }
     }
