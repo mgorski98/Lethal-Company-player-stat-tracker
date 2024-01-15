@@ -170,7 +170,7 @@ namespace LethalCompanyStatTracker {
             bool validPlayer = localPlayerId == playerId;
             if (!validPlayer)
                 return;
-            //prawdopodobnie trzeba będzie przekazać też tutaj ID gracza i sprawdzić czy jest równe ID lokalnego gracza i dopiero wtedy dodać
+
             if (!causesOfDeath.TryGetValue(causeOfDeath_Name, out int count)) {
                 causesOfDeath[causeOfDeath_Name] = 1;
                 StatTrackerMod.Logger.LogMessage($"first death by: {causeOfDeath_Name}");
