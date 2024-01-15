@@ -18,27 +18,30 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        [HarmonyPatch(typeof(RoundManager), "DespawnPropsAtEndOfRound")]
-        [HarmonyPrefix]
-        static void OnMoonExit(RoundManager __instance) {
+        [HarmonyPatch(typeof(StartMatchLever), "EndGame")]
+        [HarmonyPostfix]
+        static void OnMoonExit_Initial() {
             try {
-                Tracker.ProcessOnMoonQuit();
-                Tracker.UpdatePlanetExpeditionData(__instance.currentLevel);
+                Tracker.InitialProcessOnQuit();
+                Tracker.ShowCollectedItemsDialog();
             } catch (System.Exception e) {
-                LogError(e, nameof(OnMoonExit));
+                LogError(e, nameof(OnMoonExit_Initial));
             }
         }
 
-        static void OnPlayerDeath() {
+        [HarmonyPatch(typeof(RoundManager), "DespawnPropsAtEndOfRound")]
+        [HarmonyPostfix]
+        static void OnMoonExit_End() {
             try {
-
+                Tracker.ProcessOnMoonQuit();
+                Tracker.UpdatePlanetExpeditionData(RoundManager.Instance.currentLevel);
             } catch (System.Exception e) {
-                LogError(e, nameof(OnPlayerDeath));
+                LogError(e, nameof(OnMoonExit_End));
             }
         }
 
         private static void LogError(System.Exception e, string occurMethod) {
-            StatTrackerMod.Logger.LogError($"An error has occurred in method {occurMethod}: {e.Message}");
+            StatTrackerMod.Logger.LogError($"An error has occurred in method {occurMethod}: {e.Message}\nTrace: {e.StackTrace}");
         }
     }
 }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Linq;
 using UnityEngine;
 using System.IO;
 using Newtonsoft.Json;
+using TMPro;
 
 namespace LethalCompanyStatTracker {
     public class StatisticsTracker : MonoBehaviour {
@@ -35,6 +37,7 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, MoonData> moonExpeditionsData;
             public Dictionary<string, int> causesOfDeath;
             public Dictionary<string, int> enemiesKilled;
+            public Dictionary<string, ItemData> allSoldItems;
         }
 
 
@@ -43,6 +46,9 @@ namespace LethalCompanyStatTracker {
         private Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
         private Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
         private Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
+        private Dictionary<string, ItemData> allSoldItems = new Dictionary<string, ItemData>();
+
+        private GrabbableObject[] currentNewItems;
 
         private string StatsStoreFilePath => Path.Combine(Application.persistentDataPath, "player_stats_data.json");
 
@@ -75,6 +81,17 @@ namespace LethalCompanyStatTracker {
             StatTrackerMod.Logger.LogMessage($"Snapshotted {shipOrPlayerScrapItems.Length} items;");
         }
 
+        public void InitialProcessOnQuit() {
+            if (StartOfRound.Instance.allPlayersDead) {
+                StatTrackerMod.Logger.LogMessage("No players alive so nothing new was collected :(");
+                return;
+            }
+
+            //this is called twice just to ensure that beehives (which players usually grab AFTER departure) are counted and shown properly
+            var newItems = GetAllCollectedScrap().Where(item => !itemsSnapshot.Contains(item)).ToArray();
+            currentNewItems = newItems;
+        }
+
         public void ProcessOnMoonQuit() {
             if (StartOfRound.Instance.allPlayersDead) {
                 StatTrackerMod.Logger.LogMessage("No players alive so nothing new was collected :(");
@@ -96,9 +113,9 @@ namespace LethalCompanyStatTracker {
                     data.TotalPrice += item.scrapValue;
                 }
             }
-
-            //todo: show popup
-            StatTrackerMod.Logger.LogMessage($"Collected {newItems.Length} new items worth a total of {newItems.Sum(i => i.scrapValue)}, updating the prefs...");
+            currentNewItems = newItems;
+            var creditsEarned = newItems.Sum(i => i.scrapValue);
+            StatTrackerMod.Logger.LogMessage($"Collected {newItems.Length} new items worth a total of {creditsEarned}, updating the prefs...");
             foreach (var item in newItems) {
                 StatTrackerMod.Logger.LogMessage($"{item.itemProperties.itemName} : {item.scrapValue}");
             }
@@ -111,16 +128,73 @@ namespace LethalCompanyStatTracker {
             }
         }
 
+        public void ShowCollectedItemsDialog() {
+            if (currentNewItems.Length > 0) {
+                StartCoroutine(ShowCollectedItems(currentNewItems.Sum(i => i.scrapValue), currentNewItems));
+            }
+        }
+
+        private IEnumerator ShowCollectedItems(int creditsEarned, GrabbableObject[] items) {
+            ChangeProfitWindowTitle("Collected:");
+            yield return new WaitForSeconds(5.5f);
+            StatTrackerMod.Logger.LogMessage("Showing collected items dialog");
+            HUDManager.Instance.DisplayCreditsEarning(creditsEarned, items, -1);
+            StartCoroutine(ReturnToOldProfitWindowTitle());
+        }
+
+        public void StoreSoldItems(GrabbableObject[] obj) {
+            foreach (var item in obj) {
+                var i = item.itemProperties;
+                if (allSoldItems.TryGetValue(i.itemName, out var data)) {
+                    var newData = new ItemData() {
+                        ItemName = i.itemName,
+                        Count = 1,
+                        TotalPrice = item.scrapValue
+                    };
+                    allSoldItems[i.itemName] = newData;
+                } else {
+                    data.Count++;
+                    data.TotalPrice += item.scrapValue;
+                }
+            }
+            StatTrackerMod.Logger.LogMessage($"Stored {obj.Length} sold items.");
+        }
+
+        private TextMeshProUGUI ProfitWindowTitle;
+        public void ChangeProfitWindowTitle(string newTitle) {
+            if (ProfitWindowTitle == null) {
+                foreach (Transform child in HUDManager.Instance.HUDContainer.transform) {
+                    var text = child.GetComponentsInChildren<TextMeshProUGUI>(true).FirstOrDefault(t => t.text.ToLower() == "paycheck!");
+                    if (text != null) {
+                        ProfitWindowTitle = text;
+                        break;
+                    }
+                }
+            }
+            if (ProfitWindowTitle == null)
+                return;
+
+            StatTrackerMod.Logger.LogMessage($"TITLE TEXT: {ProfitWindowTitle.text}");
+            ProfitWindowTitle.text = newTitle;
+        }
+
+        public IEnumerator ReturnToOldProfitWindowTitle() {
+            yield return new WaitForSeconds(10f);
+            ChangeProfitWindowTitle("Paycheck!");
+        }
+
         public GrabbableObject[] GetAllCollectedScrap() {
             return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed)).ToArray();
         }
 
+        #region Progress persistence
         private void SaveProgress() {
             var data = new PlayerStatisticsData {
                 enemiesKilled = this.enemiesKilled,
                 allCollectedItems = this.allCollectedItems,
                 causesOfDeath = this.causesOfDeath, 
-                moonExpeditionsData = this.moonExpeditionsData
+                moonExpeditionsData = this.moonExpeditionsData,
+                allSoldItems = this.allSoldItems
             };
 
             var json = JsonConvert.SerializeObject(data);
@@ -142,8 +216,10 @@ namespace LethalCompanyStatTracker {
             causesOfDeath = data.causesOfDeath;
             enemiesKilled = data.enemiesKilled;
             moonExpeditionsData = data.moonExpeditionsData;
+            allSoldItems = data.allSoldItems;
             StatTrackerMod.Logger.LogMessage("Loaded stats file.");
         }
+        #endregion
 
         public void UpdatePlanetExpeditionData(SelectableLevel level) {
             var planetName = level.PlanetName;

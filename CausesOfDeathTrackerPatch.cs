@@ -27,9 +27,11 @@ namespace LethalCompanyStatTracker {
             public const string TURRET = "Turret";
             public const string EXT_LADDER = "Extension ladder";
             public const string COMPANY_MONSTER = "Jeb (AKA Company Monster)";
-            public const string DROWNING = "Drowning & Quicksand";
+            public const string DROWNING = "Drowning";
             public const string ABANDON = "Abandonment";
             public const string FRIENDLY_FIRE = "Friendly fire";
+            public const string LIGHTNING_STRIKE = "Lightning";
+            public const string QUICKSAND = "Quicksand";
         }
 
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
@@ -109,12 +111,16 @@ namespace LethalCompanyStatTracker {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NUTCRACKER, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
-        [HarmonyPatch(typeof(PlayerControllerB), "Hit")]
+        [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
-        static void NutcrackerShotgunAnFriendlyFirePatch(ref PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
-            if (__instance == GameNetworkManager.Instance.localPlayerController && __instance.isPlayerDead) {
+        static void NutcrackerShotgunAnFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
+            var player = __instance as PlayerControllerB;
+            if (player == null)
+                return;
+
+            if (player == GameNetworkManager.Instance.localPlayerController && player.isPlayerDead) {
                 var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
-                StatisticsTracker.Instance.OnPlayerDeath(cause, __instance.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(cause, player.playerClientId);
             }
         }
 
@@ -199,6 +205,7 @@ namespace LethalCompanyStatTracker {
                             break;
                     }
                     case CauseOfDeath.Drowning: {
+                            //todo: quicksand is NOT equivalent to drowning. it does not work
                             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.DROWNING, id);
                             LogDeathCause(DeathCauseConstants.DROWNING, false);
                             break;
@@ -223,6 +230,16 @@ namespace LethalCompanyStatTracker {
                             //zobaczymy czy działa i czy drabina też się nie liczy do tego
                             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIANT, id);
                             LogDeathCause(DeathCauseConstants.GIANT, true);
+                            break;
+                        }
+                    case CauseOfDeath.Electrocution: {
+                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.LIGHTNING_STRIKE, id);
+                            LogDeathCause(DeathCauseConstants.LIGHTNING_STRIKE, false);
+                            break;
+                        }
+                    case CauseOfDeath.Suffocation: {
+                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.QUICKSAND, id);
+                            LogDeathCause(DeathCauseConstants.QUICKSAND, false);
                             break;
                         }
                     //todo: check which kind of death cause is falling extension ladder

@@ -26,11 +26,11 @@ namespace LethalCompanyStatTracker {
             TrackEnemyKilled(__instance, Enemies.BRACKEN, playerWhoHit);
         }
 
-        [HarmonyPatch(typeof(PufferAI), TARGET_METHOD)]
-        [HarmonyPostfix]
-        static void OnSporeLizardKill(PufferAI __instance, PlayerControllerB playerWhoHit) {
-            TrackEnemyKilled(__instance, Enemies.SPORE_DOG, playerWhoHit);
-        }
+        //[HarmonyPatch(typeof(PufferAI), "KillEnemy")]
+        //[HarmonyPostfix]
+        //static void OnSporeLizardKill(PufferAI __instance, PlayerControllerB playerWhoHit) {
+        //    TrackEnemyKilled(__instance, Enemies.SPORE_DOG, playerWhoHit);
+        //}
 
         [HarmonyPatch(typeof(CrawlerAI), TARGET_METHOD)]
         [HarmonyPostfix]
@@ -74,7 +74,7 @@ namespace LethalCompanyStatTracker {
             TrackEnemyKilled(__instance, Enemies.MASKED, playerWhoHit);
         }
 
-        [HarmonyPatch(typeof(PlayerControllerB), "Hit")]
+        [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
         static void OnFriendlyFireKill(ref PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
             if (!__instance.IsOwner && playerWhoHit.IsOwner && __instance.isPlayerDead) {

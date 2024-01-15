@@ -20,6 +20,8 @@ namespace LethalCompanyStatTracker
             HarmonyClient.PatchAll(typeof(PlayerSpawnStatTrackerPatch));
             HarmonyClient.PatchAll(typeof(CausesOfDeathTrackerPatch));
             HarmonyClient.PatchAll(typeof(EnemyKillsTrackerPatch));
+            HarmonyClient.PatchAll(typeof(DepositItemsDeskPatch));
+            HarmonyClient.PatchAll(typeof(MenuManagerPatch));
 
             Logger.LogMessage("Initialized correctly!");
         }
