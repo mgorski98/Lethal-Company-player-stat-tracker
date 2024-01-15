@@ -1,6 +1,7 @@
 ﻿using GameNetcodeStuff;
 using HarmonyLib;
 using UnityEngine;
+using System.Collections;
 
 namespace LethalCompanyStatTracker {
     internal class CausesOfDeathTrackerPatch {
@@ -23,7 +24,7 @@ namespace LethalCompanyStatTracker {
             public const string NUTCRACKER = "Nutcracker";
             public const string SPIDER = "Bunker spider";
             public const string NOT_THE_BEES = "Circuit bees";
-            public const string MINE = "Landmine";
+            public const string MINE = "Landmines & Lightning"; // because they use the same explosion particles it is almost impossible to differentiate which one killed the player
             public const string TURRET = "Turret";
             public const string EXT_LADDER = "Extension ladder";
             public const string COMPANY_MONSTER = "Jeb (AKA Company Monster)";
@@ -34,10 +35,12 @@ namespace LethalCompanyStatTracker {
             public const string QUICKSAND = "Quicksand";
         }
 
+        private static bool CanBeKilled = true;
+
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
         [HarmonyPostfix]
         static void JesterAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.JESTER, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.JESTER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(SpringManAI), "OnCollideWithPlayer")]
@@ -50,26 +53,26 @@ namespace LethalCompanyStatTracker {
 
             //just in case someone doesn't sync properly
             if ((playerController.health <= 0 || playerController.isPlayerDead) && playerController.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COILHEAD, id);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COILHEAD);
             }
         }
 
         [HarmonyPatch(typeof(CrawlerAI), "EatPlayerBodyAnimation")]
         [HarmonyPostfix]
         static void ThumperAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.THUMPER, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.THUMPER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(MouthDogAI), "KillPlayer")]
         [HarmonyPostfix]
         static void DogAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.DOG, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.DOG);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(BlobAI), "eatPlayerBody")]
         [HarmonyPostfix]
         static void BlobAIPatch(int playerKilled) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BLOB, StartOfRound.Instance.allPlayerScripts[playerKilled].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BLOB);//, StartOfRound.Instance.allPlayerScripts[playerKilled].playerClientId);
         }
 
         [HarmonyPatch(typeof(PufferAI), "OnCollideWithPlayer")]
@@ -81,7 +84,7 @@ namespace LethalCompanyStatTracker {
             var id = playerController.playerClientId;
 
             if ((playerController.health <= 0 || playerController.isPlayerDead) && playerController.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPORE_DOG, id);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPORE_DOG);//, id);
             }
         }
 
@@ -90,7 +93,7 @@ namespace LethalCompanyStatTracker {
         static void BrackenAIPatch(FlowermanAI __instance) {
             if (__instance.inSpecialAnimationWithPlayer == null)
                 return;
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BRACKEN, __instance.inSpecialAnimationWithPlayer.playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BRACKEN);//, __instance.inSpecialAnimationWithPlayer.playerClientId);
         }
 
         [HarmonyPatch(typeof(DressGirlAI), "OnCollideWithPlayer")]
@@ -101,14 +104,14 @@ namespace LethalCompanyStatTracker {
                 return;
 
             if (controller == __instance.hauntingPlayer && controller.isPlayerDead && controller.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIRL, controller.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIRL);//, controller.playerClientId);
             }
         }
 
         [HarmonyPatch(typeof(NutcrackerEnemyAI), "LegKickPlayer")]
         [HarmonyPostfix]
         static void NutcrackerKickAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NUTCRACKER, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NUTCRACKER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
@@ -120,7 +123,7 @@ namespace LethalCompanyStatTracker {
 
             if (player == GameNetworkManager.Instance.localPlayerController && player.isPlayerDead) {
                 var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
-                StatisticsTracker.Instance.OnPlayerDeath(cause, player.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(cause);//, player.playerClientId);
             }
         }
 
@@ -132,7 +135,7 @@ namespace LethalCompanyStatTracker {
                 return;
 
             if ((controller.isPlayerDead || controller.health <= 0) && controller.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPIDER, controller.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPIDER);//, controller.playerClientId);
             }
         }
 
@@ -144,22 +147,21 @@ namespace LethalCompanyStatTracker {
                 return;
 
             if (controller.health <= 0 || controller.isPlayerDead && controller.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.HOARDING_BUG, controller.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.HOARDING_BUG);//, controller.playerClientId);
             }
         }
 
         [HarmonyPatch(typeof(BaboonBirdAI), "killPlayerAnimation")]
         [HarmonyPrefix]
         static void BaboonHawkAIPatch(int playerObject) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BABOON, StartOfRound.Instance.allPlayerScripts[playerObject].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BABOON);//, StartOfRound.Instance.allPlayerScripts[playerObject].playerClientId);
         }
 
-        [HarmonyPatch(typeof(RedLocustBees), "BeesKillPlayer")]
-        [HarmonyPostfix]
-        static void CircuitBeesAIPatch(PlayerControllerB killedPlayer) {
-            var id = killedPlayer?.playerClientId ?? 0;
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NOT_THE_BEES, id);
-        }
+        //[HarmonyPatch(typeof(RedLocustBees), "BeesKillPlayer")]
+        //[HarmonyPostfix]
+        //static void CircuitBeesAIPatch(PlayerControllerB killedPlayer) {
+        //    StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NOT_THE_BEES);//, id);
+        //}
 
         [HarmonyPatch(typeof(MaskedPlayerEnemy), "killAnimation")]
         [HarmonyPostfix]
@@ -169,7 +171,7 @@ namespace LethalCompanyStatTracker {
                 return;
 
             if (player.isPlayerDead && player.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.MASKED, player.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.MASKED);//, player.playerClientId);
             }
         }
 
@@ -177,74 +179,82 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         static void SnareFleaAIPatch(PlayerControllerB playerBeingKilled, bool playerDead) {
             if (playerDead) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SNARE_FLEA, playerBeingKilled.playerClientId);
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SNARE_FLEA);//, playerBeingKilled.playerClientId);
             }
         }
 
         [HarmonyPatch(typeof(SandWormAI), "EatPlayer")]
         [HarmonyPostfix]
         static void EarthWormAIPatch(PlayerControllerB playerScript) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.WORM, playerScript.playerClientId);
+            if (CanBeKilled && !playerScript.isPlayerDead) {
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.WORM);//, playerScript.playerClientId);
+                CanBeKilled = false;
+                playerScript.StartCoroutine(RestoreAbilityToBeKilledByAMob());
+            }
+        }
+
+        private static IEnumerator RestoreAbilityToBeKilledByAMob() {
+            yield return new WaitForSeconds(1.25f);
+            CanBeKilled = true;
         }
 
         [HarmonyPatch(typeof(DepositItemsDesk), "AnimationGrabPlayer")]
         [HarmonyPostfix]
         static void CompanyMonsterDeath(int playerID) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COMPANY_MONSTER, StartOfRound.Instance.allPlayerScripts[playerID].playerClientId);
+            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COMPANY_MONSTER);//, StartOfRound.Instance.allPlayerScripts[playerID].playerClientId);
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "KillPlayer")]
         [HarmonyPostfix]
         static void NonEnemiesDeathPatch(PlayerControllerB __instance, CauseOfDeath causeOfDeath) {
-            var id = __instance.playerClientId;
-            if (__instance.isPlayerDead && __instance.IsOwner) {
+            if (__instance.isPlayerDead) {
+                bool isMonster = false;
+                string cause = "";
                 switch (causeOfDeath) {
                     case CauseOfDeath.Blast: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.MINE, id);
-                            LogDeathCause(DeathCauseConstants.MINE, false);
+                            cause = DeathCauseConstants.MINE;
                             break;
                     }
                     case CauseOfDeath.Drowning: {
-                            //todo: quicksand is NOT equivalent to drowning. it does not work
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.DROWNING, id);
-                            LogDeathCause(DeathCauseConstants.DROWNING, false);
+                            cause = DeathCauseConstants.DROWNING;
                             break;
                         }
 
                     case CauseOfDeath.Gunshots: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.TURRET, id);
-                            LogDeathCause(DeathCauseConstants.TURRET, false);
+                            cause = DeathCauseConstants.TURRET;
                             break;
                         }
                     case CauseOfDeath.Abandoned: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.ABANDON, id);
-                            LogDeathCause(DeathCauseConstants.ABANDON, false);
+                            cause = DeathCauseConstants.ABANDON;
                             break;
                         }
                     case CauseOfDeath.Gravity: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GRAVITY, id);
-                            LogDeathCause(DeathCauseConstants.GRAVITY, false);
+                            cause = DeathCauseConstants.GRAVITY;
                             break;
                         }
                     case CauseOfDeath.Crushing: {
-                            //zobaczymy czy działa i czy drabina też się nie liczy do tego
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIANT, id);
-                            LogDeathCause(DeathCauseConstants.GIANT, true);
+                            cause = DeathCauseConstants.GIANT;
+                            isMonster = true;
                             break;
                         }
                     case CauseOfDeath.Electrocution: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.LIGHTNING_STRIKE, id);
-                            LogDeathCause(DeathCauseConstants.LIGHTNING_STRIKE, false);
+                            cause = DeathCauseConstants.NOT_THE_BEES;
+                            isMonster = true;
                             break;
                         }
                     case CauseOfDeath.Suffocation: {
-                            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.QUICKSAND, id);
-                            LogDeathCause(DeathCauseConstants.QUICKSAND, false);
+                            cause = DeathCauseConstants.QUICKSAND;
                             break;
                         }
                     //todo: check which kind of death cause is falling extension ladder
                     default:
+                        LogDeathCause(causeOfDeath.ToString(), false);
                         break;
+                }
+
+                if (string.IsNullOrEmpty(cause)) {
+                    StatisticsTracker.Instance.OnPlayerDeath(cause);
+                    LogDeathCause(cause, isMonster);
                 }
             }
         }

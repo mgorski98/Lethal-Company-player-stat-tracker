@@ -1,10 +1,12 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using LethalCompanyStatTracker.TerminalStuff;
 
 namespace LethalCompanyStatTracker
 {
     [BepInPlugin(ModGUID, ModName, ModVersion)]
+    [BepInDependency("atomic.terminalapi")]
     public class StatTrackerMod : BaseUnityPlugin
     {
         public const string ModGUID = "DingDingDev.StatTracker";
@@ -21,7 +23,7 @@ namespace LethalCompanyStatTracker
             HarmonyClient.PatchAll(typeof(CausesOfDeathTrackerPatch));
             HarmonyClient.PatchAll(typeof(EnemyKillsTrackerPatch));
             HarmonyClient.PatchAll(typeof(DepositItemsDeskPatch));
-            HarmonyClient.PatchAll(typeof(MenuManagerPatch));
+            HarmonyClient.PatchAll(typeof(TerminalCommandsPatch));
 
             Logger.LogMessage("Initialized correctly!");
         }

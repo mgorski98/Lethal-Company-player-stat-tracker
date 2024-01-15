@@ -1,5 +1,7 @@
 ﻿using GameNetcodeStuff;
 using HarmonyLib;
+using System.Collections.Generic;
+using System.Collections;
 
 namespace LethalCompanyStatTracker {
     internal class EnemyKillsTrackerPatch {
@@ -19,6 +21,8 @@ namespace LethalCompanyStatTracker {
         }
 
         private const string TARGET_METHOD = "HitEnemy";
+
+        private static Dictionary<int, EnemyAI> AIScriptsAlreadyDead = new Dictionary<int, EnemyAI>();
 
         [HarmonyPatch(typeof(FlowermanAI), TARGET_METHOD)]
         [HarmonyPostfix]
@@ -78,7 +82,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         static void OnFriendlyFireKill(ref PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
             if (!__instance.IsOwner && playerWhoHit.IsOwner && __instance.isPlayerDead) {
-                StatisticsTracker.Instance.OnEnemyKilled(Enemies.A_FRIEND, playerWhoHit.playerClientId);
+                StatisticsTracker.Instance.OnEnemyKilled(Enemies.A_FRIEND);
             }
         }
 
@@ -89,9 +93,18 @@ namespace LethalCompanyStatTracker {
         }
 
         static void TrackEnemyKilled(EnemyAI enemyScript, string enemyName, PlayerControllerB player) {
-            if (enemyScript.enemyHP <= 0) {
-                StatisticsTracker.Instance.OnEnemyKilled(enemyName, player.playerClientId);
+            if (AIScriptsAlreadyDead.ContainsKey(enemyScript.GetInstanceID()))
+                return;
+            if (enemyScript.enemyHP <= 0 && enemyScript.isEnemyDead) {
+                AIScriptsAlreadyDead[enemyScript.GetInstanceID()] = enemyScript;
+                enemyScript.StartCoroutine(RemoveFromDict(enemyScript.GetInstanceID()));
+                StatisticsTracker.Instance.OnEnemyKilled(enemyName);
             }
+        }
+
+        static IEnumerator RemoveFromDict(int id) {
+            yield return new UnityEngine.WaitForSeconds(2f);
+            AIScriptsAlreadyDead.Remove(id);
         }
     }
 }

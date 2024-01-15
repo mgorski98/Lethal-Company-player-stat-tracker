@@ -38,15 +38,17 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, int> causesOfDeath;
             public Dictionary<string, int> enemiesKilled;
             public Dictionary<string, ItemData> allSoldItems;
+            public Dictionary<string, ItemData> allBoughtItems;
         }
 
 
         private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
-        private Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
-        private Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
-        private Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
-        private Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
-        private Dictionary<string, ItemData> allSoldItems = new Dictionary<string, ItemData>();
+        public Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
+        public Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
+        public Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
+        public Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
+        public Dictionary<string, ItemData> allSoldItems = new Dictionary<string, ItemData>();
+        public Dictionary<string, ItemData> allBoughtItems = new Dictionary<string, ItemData>();
 
         private GrabbableObject[] currentNewItems;
 
@@ -149,12 +151,12 @@ namespace LethalCompanyStatTracker {
                     var newData = new ItemData() {
                         ItemName = i.itemName,
                         Count = 1,
-                        TotalPrice = item.scrapValue
+                        TotalPrice = Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate)
                     };
                     allSoldItems[i.itemName] = newData;
                 } else {
                     data.Count++;
-                    data.TotalPrice += item.scrapValue;
+                    data.TotalPrice += Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate);
                 }
             }
             StatTrackerMod.Logger.LogMessage($"Stored {obj.Length} sold items.");
@@ -194,10 +196,11 @@ namespace LethalCompanyStatTracker {
                 allCollectedItems = this.allCollectedItems,
                 causesOfDeath = this.causesOfDeath, 
                 moonExpeditionsData = this.moonExpeditionsData,
-                allSoldItems = this.allSoldItems
+                allSoldItems = this.allSoldItems,
+                allBoughtItems = this.allBoughtItems
             };
 
-            var json = JsonConvert.SerializeObject(data);
+            var json = JsonConvert.SerializeObject(data, Formatting.Indented);
             File.WriteAllText(StatsStoreFilePath, json);
             StatTrackerMod.Logger.LogMessage($"Saved stats progress!");
         }
@@ -217,6 +220,7 @@ namespace LethalCompanyStatTracker {
             enemiesKilled = data.enemiesKilled;
             moonExpeditionsData = data.moonExpeditionsData;
             allSoldItems = data.allSoldItems;
+            allBoughtItems = data.allBoughtItems;
             StatTrackerMod.Logger.LogMessage("Loaded stats file.");
         }
         #endregion
@@ -241,12 +245,9 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        public void OnPlayerDeath(string causeOfDeath_Name, ulong playerId = ulong.MaxValue) {
-            var localPlayerId = GameNetworkManager.Instance.localPlayerController.playerClientId;
-            bool validPlayer = localPlayerId == playerId;
-            if (!validPlayer)
+        public void OnPlayerDeath(string causeOfDeath_Name) {
+            if (string.IsNullOrWhiteSpace(causeOfDeath_Name))
                 return;
-
             if (!causesOfDeath.TryGetValue(causeOfDeath_Name, out int count)) {
                 causesOfDeath[causeOfDeath_Name] = 1;
                 StatTrackerMod.Logger.LogMessage($"first death by: {causeOfDeath_Name}");
@@ -260,10 +261,7 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        public void OnEnemyKilled(string enemyKilledName, ulong playerId = ulong.MaxValue) {
-            if (playerId != GameNetworkManager.Instance.localPlayerController.playerClientId)
-                return;
-
+        public void OnEnemyKilled(string enemyKilledName) {
             if (!enemiesKilled.TryGetValue(enemyKilledName, out int count)) {
                 enemiesKilled[enemyKilledName] = 1;
             } else {
