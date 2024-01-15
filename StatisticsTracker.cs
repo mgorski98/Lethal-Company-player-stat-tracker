@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using HarmonyLib;
 using UnityEngine;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace LethalCompanyStatTracker {
     public class StatisticsTracker : MonoBehaviour {
@@ -19,6 +19,7 @@ namespace LethalCompanyStatTracker {
         public class MoonData {
             public string MoonName;
             public Dictionary<LevelWeatherType, int> WeatherExpeditions = new Dictionary<LevelWeatherType, int>();
+            [JsonIgnore]
             public int TotalExpeditionsCount => WeatherExpeditions.Sum(kvp => kvp.Value);
 
             public MoonData() {
@@ -28,13 +29,22 @@ namespace LethalCompanyStatTracker {
             }
         }
 
+        [Serializable]
+        public class PlayerStatisticsData {
+            public Dictionary<string, ItemData> allCollectedItems;
+            public Dictionary<string, MoonData> moonExpeditionsData;
+            public Dictionary<string, int> causesOfDeath;
+            public Dictionary<string, int> enemiesKilled;
+        }
+
+
         private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
         private Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
         private Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
         private Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
         private Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
 
-        private string StatsStoreFilePath => Path.Combine(Application.persistentDataPath, "player_stats.json");
+        private string StatsStoreFilePath => Path.Combine(Application.persistentDataPath, "player_stats_data.json");
 
         public static StatisticsTracker Instance { get; private set; } = null;
 
@@ -106,17 +116,33 @@ namespace LethalCompanyStatTracker {
         }
 
         private void SaveProgress() {
-            //todo: save the dictionary to player prefs OR file
+            var data = new PlayerStatisticsData {
+                enemiesKilled = this.enemiesKilled,
+                allCollectedItems = this.allCollectedItems,
+                causesOfDeath = this.causesOfDeath, 
+                moonExpeditionsData = this.moonExpeditionsData
+            };
+
+            var json = JsonConvert.SerializeObject(data);
+            File.WriteAllText(StatsStoreFilePath, json);
+            StatTrackerMod.Logger.LogMessage($"Saved stats progress!");
         }
 
         private void LoadProgress() {
             var path = StatsStoreFilePath;
 
             if (!File.Exists(path)) {
+                StatTrackerMod.Logger.LogMessage($"Stats file does not exist, starting fresh...");
                 return;
             }
 
-
+            var json = File.ReadAllText(path);
+            var data = JsonConvert.DeserializeObject<PlayerStatisticsData>(json);
+            allCollectedItems = data.allCollectedItems;
+            causesOfDeath = data.causesOfDeath;
+            enemiesKilled = data.enemiesKilled;
+            moonExpeditionsData = data.moonExpeditionsData;
+            StatTrackerMod.Logger.LogMessage("Loaded stats file.");
         }
 
         public void UpdatePlanetExpeditionData(SelectableLevel level) {
@@ -128,6 +154,7 @@ namespace LethalCompanyStatTracker {
                     MoonName = planetName
                 };
 
+                newData.WeatherExpeditions[weather] = 1;
                 moonExpeditionsData[planetName] = newData;
             } else {
                 if (!data.WeatherExpeditions.ContainsKey(weather)) {
@@ -155,6 +182,19 @@ namespace LethalCompanyStatTracker {
             foreach (var kvp in causesOfDeath) {
                 StatTrackerMod.Logger.LogMessage($"Deaths by {kvp.Key}: {kvp.Value}");
             }
+        }
+
+        public void OnEnemyKilled(string enemyKilledName, ulong playerId = ulong.MaxValue) {
+            if (playerId != GameNetworkManager.Instance.localPlayerController.playerClientId)
+                return;
+
+            if (!enemiesKilled.TryGetValue(enemyKilledName, out int count)) {
+                enemiesKilled[enemyKilledName] = 1;
+            } else {
+                enemiesKilled[enemyKilledName] = count+1;
+            }
+
+            StatTrackerMod.Logger.LogMessage($"Killed a total of {count + 1} enemies (previously {count})");
         }
     }
 }

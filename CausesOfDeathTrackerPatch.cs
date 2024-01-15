@@ -2,8 +2,6 @@
 using HarmonyLib;
 using UnityEngine;
 
-/*TODO: PASS KILLED PLAYER ID TO ON PLAYER DEATH METHOD SO THAT IT CAN BE VERIFIED BY THE METHOD*/
-
 namespace LethalCompanyStatTracker {
     internal class CausesOfDeathTrackerPatch {
         public static class DeathCauseConstants {
@@ -114,7 +112,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPatch(typeof(PlayerControllerB), "Hit")]
         [HarmonyPostfix]
         static void NutcrackerShotgunAnFriendlyFirePatch(ref PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
-            if (__instance == GameNetworkManager.Instance.localPlayerController) {
+            if (__instance == GameNetworkManager.Instance.localPlayerController && __instance.isPlayerDead) {
                 var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
                 StatisticsTracker.Instance.OnPlayerDeath(cause, __instance.playerClientId);
             }

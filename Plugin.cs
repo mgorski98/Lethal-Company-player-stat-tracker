@@ -1,7 +1,6 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
-using GameNetcodeStuff;
 
 namespace LethalCompanyStatTracker
 {
@@ -12,7 +11,7 @@ namespace LethalCompanyStatTracker
         public const string ModName = "Stat tracker";
         public const string ModVersion = "1.0";
 
-        public static ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource(ModGUID);
+        public static new ManualLogSource Logger = BepInEx.Logging.Logger.CreateLogSource(ModGUID);
 
         private readonly Harmony HarmonyClient = new Harmony(ModGUID);
 
@@ -20,6 +19,7 @@ namespace LethalCompanyStatTracker
             HarmonyClient.PatchAll(typeof(StatTrackerPatch));
             HarmonyClient.PatchAll(typeof(PlayerSpawnStatTrackerPatch));
             HarmonyClient.PatchAll(typeof(CausesOfDeathTrackerPatch));
+            HarmonyClient.PatchAll(typeof(EnemyKillsTrackerPatch));
 
             Logger.LogMessage("Initialized correctly!");
         }
