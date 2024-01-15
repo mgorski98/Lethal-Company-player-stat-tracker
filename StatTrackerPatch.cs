@@ -29,8 +29,6 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        //[HarmonyPatch(typeof(), "")]
-        [HarmonyPrefix]
         static void OnPlayerDeath() {
             try {
 

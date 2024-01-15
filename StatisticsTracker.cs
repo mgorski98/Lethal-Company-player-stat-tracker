@@ -32,6 +32,7 @@ namespace LethalCompanyStatTracker {
         private Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
         private Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
         private Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
+        private Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
 
         private string StatsStoreFilePath => Path.Combine(Application.persistentDataPath, "player_stats.json");
 
@@ -44,11 +45,14 @@ namespace LethalCompanyStatTracker {
         }
 
         void OnDestroy() {
-            if (Instance == this)
+            if (Instance == this) {
                 Instance = null;
+                SaveProgress();
+            }
         }
 
         private void Start() {
+            LoadProgress();
             StatTrackerMod.Logger.LogMessage("Initialized the stat tracker module");
         }
 
@@ -106,6 +110,13 @@ namespace LethalCompanyStatTracker {
         }
 
         private void LoadProgress() {
+            var path = StatsStoreFilePath;
+
+            if (!File.Exists(path)) {
+                return;
+            }
+
+
         }
 
         public void UpdatePlanetExpeditionData(SelectableLevel level) {
@@ -139,6 +150,10 @@ namespace LethalCompanyStatTracker {
             } else {
                 causesOfDeath[causeOfDeath_Name] = count + 1;
                 StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {count+1}, old: {count}");
+            }
+
+            foreach (var kvp in causesOfDeath) {
+                StatTrackerMod.Logger.LogMessage($"Deaths by {kvp.Key}: {kvp.Value}");
             }
         }
     }
