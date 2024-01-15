@@ -2,23 +2,45 @@
 using UnityEngine;
 
 namespace LethalCompanyStatTracker {
-    [HarmonyPatch(typeof(RoundManager))]
     internal class StatTrackerPatch {
         private static StatisticsTracker Tracker;
 
         [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
         [HarmonyPostfix]
         static void OnMoonStart() {
-            if (Tracker == null) {
-                Tracker = GameObject.FindObjectOfType<StatisticsTracker>();
+            try {
+                if (Tracker == null) {
+                    Tracker = GameObject.FindObjectOfType<StatisticsTracker>();
+                }
+                Tracker.SnapshotCollectedItemsOnMoonStart();
+            } catch (System.Exception e) {
+                LogError(e, nameof(OnMoonStart));
             }
-            Tracker.SnapshotCollectedItemsOnMoonStart();
         }
 
         [HarmonyPatch(typeof(RoundManager), "DespawnPropsAtEndOfRound")]
         [HarmonyPrefix]
-        static void OnMoonExit() {
-            Tracker.ProcessOnMoonQuit();
+        static void OnMoonExit(RoundManager __instance) {
+            try {
+                Tracker.ProcessOnMoonQuit();
+                Tracker.UpdatePlanetExpeditionData(__instance.currentLevel);
+            } catch (System.Exception e) {
+                LogError(e, nameof(OnMoonExit));
+            }
+        }
+
+        //[HarmonyPatch(typeof(), "")]
+        [HarmonyPrefix]
+        static void OnPlayerDeath() {
+            try {
+
+            } catch (System.Exception e) {
+                LogError(e, nameof(OnPlayerDeath));
+            }
+        }
+
+        private static void LogError(System.Exception e, string occurMethod) {
+            StatTrackerMod.Logger.LogError($"An error has occurred in method {occurMethod}: {e.Message}");
         }
     }
 }

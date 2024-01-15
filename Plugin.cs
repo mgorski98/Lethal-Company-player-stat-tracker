@@ -19,6 +19,7 @@ namespace LethalCompanyStatTracker
         void Awake() {
             HarmonyClient.PatchAll(typeof(StatTrackerPatch));
             HarmonyClient.PatchAll(typeof(PlayerSpawnStatTrackerPatch));
+            HarmonyClient.PatchAll(typeof(CausesOfDeathTrackerPatch));
 
             Logger.LogMessage("Initialized correctly!");
         }

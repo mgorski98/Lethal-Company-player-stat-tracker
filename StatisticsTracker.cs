@@ -3,19 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using HarmonyLib;
 using UnityEngine;
+using System.IO;
 
 namespace LethalCompanyStatTracker {
     public class StatisticsTracker : MonoBehaviour {
 
+        [Serializable]
         public class ItemData {
-            public int count;
-            public Item item;
-            public int id => item.itemId;
-            public int totalPrice;
+            public int Count;
+            public string ItemName;
+            public int TotalPrice;
         }
 
-        private Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
+        [Serializable]
+        public class MoonData {
+            public string MoonName;
+            public Dictionary<LevelWeatherType, int> WeatherExpeditions = new Dictionary<LevelWeatherType, int>();
+            public int TotalExpeditionsCount => WeatherExpeditions.Sum(kvp => kvp.Value);
+
+            public MoonData() {
+                foreach (var weatherType in Enum.GetValues(typeof(LevelWeatherType)).Cast<LevelWeatherType>()) {
+                    WeatherExpeditions[weatherType] = 0;
+                }
+            }
+        }
+
         private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
+        private Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
+        private Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
+        private Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
+
+        private string StatsStoreFilePath => Path.Combine(Application.persistentDataPath, "player_stats.json");
 
         public static StatisticsTracker Instance { get; private set; } = null;
 
@@ -54,14 +72,14 @@ namespace LethalCompanyStatTracker {
             foreach (var item in newItems) {
                 if (!allCollectedItems.TryGetValue(item.itemProperties.itemName, out var data)) {
                     data = new ItemData {
-                        item = item.itemProperties,
-                        count = 1,
-                        totalPrice = item.scrapValue
+                        ItemName = item.itemProperties.itemName,
+                        Count = 1,
+                        TotalPrice = item.scrapValue
                     };
                     allCollectedItems[item.itemProperties.itemName] = data;
                 } else {
-                    data.count++;
-                    data.totalPrice += item.scrapValue;
+                    data.Count++;
+                    data.TotalPrice += item.scrapValue;
                 }
             }
 
@@ -75,7 +93,7 @@ namespace LethalCompanyStatTracker {
                 string name = itemPair.Key;
                 ItemData data = itemPair.Value;
 
-                StatTrackerMod.Logger.LogMessage($"Collected a total of {data.count}x {name}, with total value {data.totalPrice}");
+                StatTrackerMod.Logger.LogMessage($"Collected a total of {data.Count}x {name}, with total value {data.TotalPrice}");
             }
         }
 
@@ -83,8 +101,38 @@ namespace LethalCompanyStatTracker {
             return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed)).ToArray();
         }
 
-        private void SaveToPrefs() {
+        private void SaveProgress() {
             //todo: save the dictionary to player prefs OR file
+        }
+
+        private void LoadProgress() {
+        }
+
+        public void UpdatePlanetExpeditionData(SelectableLevel level) {
+            var planetName = level.PlanetName;
+            var weather = level.currentWeather;
+
+            if (!moonExpeditionsData.TryGetValue(planetName, out var data)) {
+                var newData = new MoonData() {
+                    MoonName = planetName
+                };
+
+                moonExpeditionsData[planetName] = newData;
+            } else {
+                if (!data.WeatherExpeditions.ContainsKey(weather)) {
+                    data.WeatherExpeditions[weather] = 1;
+                } else {
+                    data.WeatherExpeditions[weather] = data.WeatherExpeditions[weather] + 1;
+                }
+            }
+        }
+
+        public void OnPlayerDeath(string causeOfDeath_Name) {
+            if (!causesOfDeath.TryGetValue(causeOfDeath_Name, out int count)) {
+                causesOfDeath[causeOfDeath_Name] = 1;
+            } else {
+                causesOfDeath[causeOfDeath_Name] = count + 1;
+            }
         }
     }
 }
