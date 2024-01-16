@@ -19,13 +19,13 @@ A mod to track your own statistics, as well as your team's. Have you ever wanted
 ## <a name="access-terminal"></a>Accessing stats in-game
 You can access your statistics by using the terminal.
 When you type in the `help` command, you'll see that there is a new category called `STATS`.
-`stats` - displays available options. After using this command, you will be able to use the other commands.
-`scrap` - shows how much of each item was collected, how much it was worth in total, most valuable items, etc.
-`deaths` - shows causes of death and how many times employees were killed by them.
-`kills` - shows your eradication effort on the Company moons.
-`sales` - displays how many items were sold to the Company and how much money it gave you.
-`shopping` - shows information about store purchases.
-`moons` - shows your expedition log
+- `stats` - displays available options. After using this command, you will be able to use the other commands.
+- `scrap` - shows how much of each item was collected, how much it was worth in total, most valuable items, etc.
+- `deaths` - shows causes of death and how many times employees were killed by them.
+- `kills` - shows your eradication effort on the Company moons.
+- `sales` - displays how many items were sold to the Company and how much money it gave you.
+- `shopping` - shows information about store purchases.
+- `moons` - shows your expedition log
 
 ## Stats file location
 Saved statistics can be found at: 
