@@ -31,7 +31,7 @@ When you type in the `help` command, you'll see that there is a new category cal
 Saved statistics can be found at: 
 *%APPDATA%/LocalLow/ZeekerssRBLX/Lethal Company/player_stats_data.json*
 
-##Dependencies
+## Dependencies
 `TerminalAPI` - for new terminal commands
 
 ### Notes
