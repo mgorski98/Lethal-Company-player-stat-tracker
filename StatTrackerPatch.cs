@@ -9,9 +9,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnMoonStart() {
-            if (Tracker == null) {
-                Tracker = GameObject.FindObjectOfType<StatisticsTracker>();
-            }
+            FetchTrackerIfNull();
             Tracker.SnapshotCollectedItemsOnMoonStart();
         }
 
@@ -19,6 +17,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnMoonExit_Initial() {
+            FetchTrackerIfNull();
             Tracker.InitialProcessOnQuit();
             Tracker.ShowCollectedItemsDialog();
         }
@@ -28,6 +27,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyWrapSafe]
         static void OnMoonExit_End() {
             //this method checks items dropped on ship AND player's inventory items and stores them in stats
+            FetchTrackerIfNull();
             Tracker.ProcessOnMoonQuit();
             Tracker.UpdatePlanetExpeditionData(RoundManager.Instance.currentLevel);
         }
@@ -38,6 +38,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnScrapAdded(GrabbableObject GObject) {
+            FetchTrackerIfNull();
             if (!Tracker.allCollectedItems.TryGetValue(GObject.itemProperties.itemName, out var data)) {
                 Tracker.allCollectedItems[GObject.itemProperties.itemName] = new StatisticsTracker.ItemData() {
                     Count = 1,
@@ -51,6 +52,12 @@ namespace LethalCompanyStatTracker {
 
             Tracker.currentlyCollected.Add(GObject);
             StatTrackerMod.Logger.LogMessage($"Collected {GObject.itemProperties.itemName}, worth {GObject.scrapValue}");
+        }
+
+        private static void FetchTrackerIfNull() {
+            if (Tracker == null) {
+                Tracker = GameObject.FindObjectOfType<StatisticsTracker>();
+            }
         }
     }
 }

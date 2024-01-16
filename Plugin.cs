@@ -17,14 +17,19 @@ namespace LethalCompanyStatTracker
 
         private readonly Harmony HarmonyClient = new Harmony(ModGUID);
 
-        void Awake() {
-            HarmonyClient.PatchAll(typeof(StatTrackerPatch));
-            HarmonyClient.PatchAll(typeof(PlayerSpawnStatTrackerPatch));
-            HarmonyClient.PatchAll(typeof(CausesOfDeathTrackerPatch));
-            HarmonyClient.PatchAll(typeof(EnemyKillsTrackerPatch));
-            HarmonyClient.PatchAll(typeof(DepositItemsDeskPatch));
-            HarmonyClient.PatchAll(typeof(TerminalCommandsPatch));
+        private System.Type[] Patches = new System.Type[] {
+            typeof(StatTrackerPatch),
+            typeof(PlayerSpawnStatTrackerPatch),
+            typeof(CausesOfDeathTrackerPatch),
+            typeof(EnemyKillsTrackerPatch),
+            typeof(DepositItemsDeskPatch),
+            typeof(TerminalCommandsPatch),
+            typeof(BoughtItemsStorePatch)
+        };
 
+        void Awake() {
+            foreach (var patchType in Patches)
+                HarmonyClient.PatchAll(patchType);
             Logger.LogMessage("Initialized correctly!");
         }
     }

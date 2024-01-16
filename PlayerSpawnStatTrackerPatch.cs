@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HarmonyLib;
+﻿using HarmonyLib;
 using GameNetcodeStuff;
 
 namespace LethalCompanyStatTracker {
@@ -12,11 +7,8 @@ namespace LethalCompanyStatTracker {
         [HarmonyPatch("InstantiateBloodPooledObjects")]
         [HarmonyPostfix]
         static void SpawnStatTrackOnPlayer(ref PlayerControllerB __instance) {
-            if (__instance == null)
+            if (__instance != GameNetworkManager.Instance.localPlayerController)
                 return;
-            if (!__instance.IsOwner)
-                return;
-
             if (!__instance.TryGetComponent(out StatisticsTracker _tracker))
                 __instance.gameObject.AddComponent<StatisticsTracker>();
 

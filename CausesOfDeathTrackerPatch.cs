@@ -2,6 +2,7 @@
 using HarmonyLib;
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace LethalCompanyStatTracker {
     internal class CausesOfDeathTrackerPatch {
@@ -34,49 +35,54 @@ namespace LethalCompanyStatTracker {
             public const string LIGHTNING_STRIKE = "Lightning";
             public const string QUICKSAND = "Quicksand";
         }
-
-        private static bool CanBeKilled = true;
+        //for some problematic enemies who fire the event multiple times (like Earth Leviathan or Coil Heads)
+        private static Dictionary<int, (PlayerControllerB, EnemyAI)> EnemyKillDict = new Dictionary<int, (PlayerControllerB, EnemyAI)>();
 
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void JesterAIPatch(int playerId) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.JESTER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(SpringManAI), "OnCollideWithPlayer")]
         [HarmonyPostfix]
-        static void CoilheadAIPatch(Collider other) {
-            var playerController = other.GetComponent<PlayerControllerB>();
+        [HarmonyWrapSafe]
+        static void CoilheadAIPatch(SpringManAI __instance, Collider other) {
+            var playerController = __instance.MeetsStandardPlayerCollisionConditions(other);
             if (playerController == null)
                 return;
             var id = playerController.playerClientId;
 
-            //just in case someone doesn't sync properly
-            if ((playerController.health <= 0 || playerController.isPlayerDead)) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COILHEAD);
+            if ((playerController.health <= 0 || playerController.isPlayerDead) && CanBeKilled(playerController, __instance)) {
+                HandleKill(DeathCauseConstants.COILHEAD, playerController, __instance);
             }
         }
 
         [HarmonyPatch(typeof(CrawlerAI), "EatPlayerBodyAnimation")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
+        [HarmonyWrapSafe]
         static void ThumperAIPatch(int playerId) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.THUMPER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(MouthDogAI), "KillPlayer")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void DogAIPatch(int playerId) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.DOG);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(BlobAI), "eatPlayerBody")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void BlobAIPatch(int playerKilled) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BLOB);//, StartOfRound.Instance.allPlayerScripts[playerKilled].playerClientId);
         }
 
         [HarmonyPatch(typeof(PufferAI), "OnCollideWithPlayer")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void SporeLizardAIPatch(Collider other) {
             var playerController = other.GetComponent<PlayerControllerB>();
             if (playerController == null)
@@ -88,6 +94,7 @@ namespace LethalCompanyStatTracker {
 
         [HarmonyPatch(typeof(FlowermanAI), "killAnimation")]
         [HarmonyPrefix]
+        [HarmonyWrapSafe]
         static void BrackenAIPatch(FlowermanAI __instance) {
             if (__instance.inSpecialAnimationWithPlayer == null)
                 return;
@@ -96,24 +103,27 @@ namespace LethalCompanyStatTracker {
 
         [HarmonyPatch(typeof(DressGirlAI), "OnCollideWithPlayer")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void GirlAIPatch(DressGirlAI __instance, Collider other) {
             var controller = other.GetComponent<PlayerControllerB>();
             if (controller == null)
                 return;
 
-            if (controller == __instance.hauntingPlayer && controller.isPlayerDead) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIRL);//, controller.playerClientId);
+            if (controller == __instance.hauntingPlayer && controller.isPlayerDead && CanBeKilled(controller, __instance)) {
+                HandleKill(DeathCauseConstants.GIRL, controller, __instance);
             }
         }
 
         [HarmonyPatch(typeof(NutcrackerEnemyAI), "LegKickPlayer")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void NutcrackerKickAIPatch(int playerId) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NUTCRACKER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void NutcrackerShotgunAnFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
             var player = __instance;
             if (player == null)
@@ -127,30 +137,33 @@ namespace LethalCompanyStatTracker {
 
         [HarmonyPatch(typeof(SandSpiderAI), "OnCollideWithPlayer")]
         [HarmonyPostfix]
-        static void SpiderAIPatch(Collider other) {
+        [HarmonyWrapSafe]
+        static void SpiderAIPatch(SandSpiderAI __instance, Collider other) {
             var controller = other.GetComponent<PlayerControllerB>();
             if (controller == null)
                 return;
 
-            if ((controller.isPlayerDead || controller.health <= 0)) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPIDER);//, controller.playerClientId);
+            if ((controller.isPlayerDead || controller.health <= 0) && CanBeKilled(controller, __instance)) {
+                HandleKill(DeathCauseConstants.SPIDER, controller, __instance);
             }
         }
 
         [HarmonyPatch(typeof(HoarderBugAI), "OnCollideWithPlayer")]
         [HarmonyPostfix]
-        static void LootbugAIPatch(Collider other) {
+        [HarmonyWrapSafe]
+        static void LootbugAIPatch(HoarderBugAI __instance, Collider other) {
             var controller = other.GetComponent<PlayerControllerB>();
             if (controller == null)
                 return;
 
-            if (controller.health <= 0 || controller.isPlayerDead) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.HOARDING_BUG);//, controller.playerClientId);
+            if (controller.health <= 0 || controller.isPlayerDead && CanBeKilled(controller, __instance)) {
+                HandleKill(DeathCauseConstants.HOARDING_BUG, controller, __instance);
             }
         }
 
         [HarmonyPatch(typeof(BaboonBirdAI), "killPlayerAnimation")]
         [HarmonyPrefix]
+        [HarmonyWrapSafe]
         static void BaboonHawkAIPatch(int playerObject) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BABOON);//, StartOfRound.Instance.allPlayerScripts[playerObject].playerClientId);
         }
@@ -163,6 +176,7 @@ namespace LethalCompanyStatTracker {
 
         [HarmonyPatch(typeof(MaskedPlayerEnemy), "FinishKillAnimation")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void MaskedAIPatch(MaskedPlayerEnemy __instance, bool killedPlayer) {
             var player = __instance.inSpecialAnimationWithPlayer;
             if (player == null)
@@ -175,6 +189,7 @@ namespace LethalCompanyStatTracker {
 
         [HarmonyPatch(typeof(CentipedeAI), "UnclingFromPlayer")]
         [HarmonyPostfix]
+        [HarmonyWrapSafe]
         static void SnareFleaAIPatch(PlayerControllerB playerBeingKilled, bool playerDead) {
             if (playerDead) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SNARE_FLEA);//, playerBeingKilled.playerClientId);
@@ -182,27 +197,23 @@ namespace LethalCompanyStatTracker {
         }
 
         [HarmonyPatch(typeof(SandWormAI), "EatPlayer")]
-        [HarmonyPostfix]
-        static void EarthWormAIPatch(PlayerControllerB playerScript) {
-            if (CanBeKilled && !playerScript.isPlayerDead) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.WORM);//, playerScript.playerClientId);
-                CanBeKilled = false;
-                playerScript.StartCoroutine(RestoreAbilityToBeKilledByAMob());
+        [HarmonyPrefix]
+        [HarmonyWrapSafe]
+        static void EarthWormAIPatch(SandWormAI __instance, PlayerControllerB playerScript) {
+            if (!playerScript.isPlayerDead && CanBeKilled(playerScript, __instance)) {
+                HandleKill(DeathCauseConstants.WORM, playerScript, __instance);
             }
         }
 
-        private static IEnumerator RestoreAbilityToBeKilledByAMob() {
-            yield return new WaitForSeconds(1.25f);
-            CanBeKilled = true;
-        }
-
         [HarmonyPatch(typeof(DepositItemsDesk), "AnimationGrabPlayer")]
+        [HarmonyWrapSafe]
         [HarmonyPostfix]
         static void CompanyMonsterDeath(int playerID) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COMPANY_MONSTER);//, StartOfRound.Instance.allPlayerScripts[playerID].playerClientId);
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "KillPlayer")]
+        [HarmonyWrapSafe]
         [HarmonyPostfix]
         static void NonEnemiesDeathPatch(PlayerControllerB __instance, CauseOfDeath causeOfDeath) {
             if (__instance.isPlayerDead) {
@@ -257,8 +268,28 @@ namespace LethalCompanyStatTracker {
             }
         }
 
+        private static bool CanBeKilled(PlayerControllerB controller, EnemyAI enemy) {
+            var entryPresent = EnemyKillDict.TryGetValue(enemy.GetInstanceID(), out var aiControllerPair);
+            if (!entryPresent || (controller != aiControllerPair.Item1 && enemy == aiControllerPair.Item2)) {
+                return true;
+            }
+            return false;
+        }
+
         private static void LogDeathCause(string deathCause, bool isEnemy) {
             StatTrackerMod.Logger.LogMessage($"You were killed by {deathCause}{(isEnemy ? " enemy" : "")}");
+        }
+
+        private static void HandleKill(string cause, PlayerControllerB controller, EnemyAI enemy) {
+            int id = enemy.GetInstanceID();
+            EnemyKillDict[id] = (controller, enemy);
+            StatisticsTracker.Instance.OnPlayerDeath(cause);
+            enemy.StartCoroutine(RemoveMonsterIDFromDict(id));
+        }
+
+        private static IEnumerator RemoveMonsterIDFromDict(int id) {
+            yield return new WaitForSeconds(1.25f);
+            EnemyKillDict.Remove(id);
         }
     }
 }

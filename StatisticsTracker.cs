@@ -61,6 +61,7 @@ namespace LethalCompanyStatTracker {
             if (Instance == null)
                 Instance = this;
             else Destroy(this);
+            MakeStatsFileCopy();
         }
 
         void OnDestroy() {
@@ -139,6 +140,21 @@ namespace LethalCompanyStatTracker {
             StatTrackerMod.Logger.LogMessage("Showing collected items dialog");
             HUDManager.Instance.DisplayCreditsEarning(creditsEarned, items, -1);
             StartCoroutine(ReturnToOldProfitWindowTitle());
+        }
+
+        public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal) {
+            foreach (var itemIndex in boughtItems) {
+                var item = terminal.buyableItemsList[itemIndex];
+                var name = item.itemName;
+                if (!allBoughtItems.TryGetValue(name, out var data)) {
+                    var newData = new ItemData() { TotalPrice = -1, Count = 1, ItemName = name };
+                    allBoughtItems[name] = newData;
+                } else {
+                    data.Count++;
+                }
+
+            }
+            StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items");
         }
 
         public void StoreSoldItems(GrabbableObject[] obj) {
@@ -220,6 +236,19 @@ namespace LethalCompanyStatTracker {
             allBoughtItems = data.allBoughtItems;
             StatTrackerMod.Logger.LogMessage("Loaded stats file.");
         }
+
+        private void MakeStatsFileCopy() {
+            var path = StatsStoreFilePath;
+
+            if (!File.Exists(path)) {
+                StatTrackerMod.Logger.LogMessage("Stats file does not exist, cannot copy");
+                return;
+            }
+
+            File.Copy(path, Path.Combine(Application.persistentDataPath, "player_stats_data_copy.json"), true);
+            StatTrackerMod.Logger.LogMessage("Successfully made a backup of stats file");
+        }
+
         #endregion
 
         #region Callbacks
