@@ -141,7 +141,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                         var totalKills = src.Values.Sum();
                         sb.Append("Least intellectually advanced: ").Append(mostKilled_pair.Key).Append(", killed a total of ").Append(mostKilled_pair.Value).Append(" times\n");
                         sb.Append("Most elusive/powerful: ").Append(leastKilled_pair.Key).Append(", killed a total of ").Append(leastKilled_pair.Value).Append(" times\n");
-                        sb.Append("Total kills: ").Append(totalKills).Append(" nuisances killed\n");
+                        sb.Append("Total kills: ").Append(totalKills).Append(" nuisances eliminated\n");
                         sb.AppendLine("The Company values your eradication efforts.");
                     }
 
@@ -169,6 +169,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                         var leastBought_pair = src.OrderBy(kvp => kvp.Value.Count).First();
                         sb.Append("Most bought item: ").Append(mostBought_pair.Key).Append(", bought ").Append(mostBought_pair.Value.Count).Append(" times\n");
                         sb.Append("Least bought item: ").Append(leastBought_pair.Key).Append(", bought ").Append(leastBought_pair.Value.Count).Append(" times\n");
+                        sb.Append("Total bought: ").Append(src.Values.Sum(d => d.Count)).Append(" items, worth a total of ").Append(src.Values.Sum(d => d.TotalPrice)).Append(" credits\n");
                     }
 
                     return sb.ToString();

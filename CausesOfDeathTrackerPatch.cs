@@ -52,7 +52,7 @@ namespace LethalCompanyStatTracker {
             var id = playerController.playerClientId;
 
             //just in case someone doesn't sync properly
-            if ((playerController.health <= 0 || playerController.isPlayerDead) && playerController.IsOwner) {
+            if ((playerController.health <= 0 || playerController.isPlayerDead)) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COILHEAD);
             }
         }
@@ -81,10 +81,8 @@ namespace LethalCompanyStatTracker {
             var playerController = other.GetComponent<PlayerControllerB>();
             if (playerController == null)
                 return;
-            var id = playerController.playerClientId;
-
-            if ((playerController.health <= 0 || playerController.isPlayerDead) && playerController.IsOwner) {
-                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPORE_DOG);//, id);
+            if ((playerController.health <= 0 || playerController.isPlayerDead)) {
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPORE_DOG);//, playerController.playerClientId);
             }
         }
 
@@ -103,7 +101,7 @@ namespace LethalCompanyStatTracker {
             if (controller == null)
                 return;
 
-            if (controller == __instance.hauntingPlayer && controller.isPlayerDead && controller.IsOwner) {
+            if (controller == __instance.hauntingPlayer && controller.isPlayerDead) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.GIRL);//, controller.playerClientId);
             }
         }
@@ -117,11 +115,11 @@ namespace LethalCompanyStatTracker {
         [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
         static void NutcrackerShotgunAnFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
-            var player = __instance as PlayerControllerB;
+            var player = __instance;
             if (player == null)
                 return;
 
-            if (player == GameNetworkManager.Instance.localPlayerController && player.isPlayerDead) {
+            if (player.isPlayerDead) {
                 var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
                 StatisticsTracker.Instance.OnPlayerDeath(cause);//, player.playerClientId);
             }
@@ -134,7 +132,7 @@ namespace LethalCompanyStatTracker {
             if (controller == null)
                 return;
 
-            if ((controller.isPlayerDead || controller.health <= 0) && controller.IsOwner) {
+            if ((controller.isPlayerDead || controller.health <= 0)) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPIDER);//, controller.playerClientId);
             }
         }
@@ -146,7 +144,7 @@ namespace LethalCompanyStatTracker {
             if (controller == null)
                 return;
 
-            if (controller.health <= 0 || controller.isPlayerDead && controller.IsOwner) {
+            if (controller.health <= 0 || controller.isPlayerDead) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.HOARDING_BUG);//, controller.playerClientId);
             }
         }
@@ -163,14 +161,14 @@ namespace LethalCompanyStatTracker {
         //    StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NOT_THE_BEES);//, id);
         //}
 
-        [HarmonyPatch(typeof(MaskedPlayerEnemy), "killAnimation")]
+        [HarmonyPatch(typeof(MaskedPlayerEnemy), "FinishKillAnimation")]
         [HarmonyPostfix]
-        static void MaskedAIPatch(MaskedPlayerEnemy __instance) {
+        static void MaskedAIPatch(MaskedPlayerEnemy __instance, bool killedPlayer) {
             var player = __instance.inSpecialAnimationWithPlayer;
             if (player == null)
                 return;
 
-            if (player.isPlayerDead && player.IsOwner) {
+            if (player.isPlayerDead || killedPlayer) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.MASKED);//, player.playerClientId);
             }
         }
@@ -252,7 +250,7 @@ namespace LethalCompanyStatTracker {
                         break;
                 }
 
-                if (string.IsNullOrEmpty(cause)) {
+                if (!string.IsNullOrEmpty(cause)) {
                     StatisticsTracker.Instance.OnPlayerDeath(cause);
                     LogDeathCause(cause, isMonster);
                 }

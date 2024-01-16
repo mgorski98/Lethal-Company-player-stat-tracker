@@ -43,6 +43,7 @@ namespace LethalCompanyStatTracker {
 
 
         private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
+        public HashSet<GrabbableObject> currentlyCollected = new HashSet<GrabbableObject>();
         public Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
         public Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
         public Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
@@ -95,12 +96,8 @@ namespace LethalCompanyStatTracker {
         }
 
         public void ProcessOnMoonQuit() {
-            if (StartOfRound.Instance.allPlayersDead) {
-                StatTrackerMod.Logger.LogMessage("No players alive so nothing new was collected :(");
-                return;
-            }
             var allItems = GetAllCollectedScrap();
-            var newItems = allItems.Where(item => !itemsSnapshot.Contains(item)).ToArray();
+            var newItems = allItems.Where(item => !itemsSnapshot.Contains(item) && !currentlyCollected.Contains(item)).ToArray();
 
             foreach (var item in newItems) {
                 if (!allCollectedItems.TryGetValue(item.itemProperties.itemName, out var data)) {
@@ -225,6 +222,7 @@ namespace LethalCompanyStatTracker {
         }
         #endregion
 
+        #region Callbacks
         public void UpdatePlanetExpeditionData(SelectableLevel level) {
             var planetName = level.PlanetName;
             var weather = level.currentWeather;
@@ -270,5 +268,7 @@ namespace LethalCompanyStatTracker {
 
             StatTrackerMod.Logger.LogMessage($"Killed a total of {count + 1} enemies (previously {count})");
         }
+
+        #endregion
     }
 }
