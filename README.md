@@ -10,7 +10,7 @@ A mod to track your own statistics, as well as your team's. Have you ever wanted
 - Tracking creature kills (friendly fire too :))
 - Tracking the moon expeditions (how many times you went to e.g. Titan and what the weather was like)
 - Summary of items collected on a moon expedition (uses the same window as when you sell the scrap and it tells you how much you earned)
-- Access to your current stats through the [terminal](access-terminal)
+- Access to your current stats through the terminal
 - (PLANNED) Tracking the same things the game currently does (steps, etc.) but cumulative across saves
 - (PLANNED) Backing up the files after each game
 
