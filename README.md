@@ -1,8 +1,8 @@
-#Lethal Company Employee Evaluation mod
+# Lethal Company Employee Evaluation mod
 
 A mod to track your own statistics, as well as your team's. Have you ever wanted to know how many Tattered Metal Sheets you collected so far or could you host a hell of a party with all the pickles you collected? Now you can!
 
-##Features
+## Features
 - Tracking collected scrap (how much it's worth, how much of each item, etc.)
 - Tracking scrap sales (because let's face it, all of you lost some valuable items ;))
 - (TESTING) Tracking character deaths & their sources (let's see what is the most lethal cause! Pun intended)
@@ -14,9 +14,9 @@ A mod to track your own statistics, as well as your team's. Have you ever wanted
 - (PLANNED) Tracking the same things the game currently does (steps, etc.) but cumulative across saves
 - (PLANNED) Backing up the files after each game
 
-**Please note all the stats are saved locally and also track your teammates.**
+** Please note all the stats are saved locally and also track your teammates.**
 
-##<a name="access-terminal"></a>Accessing stats in-game
+## <a name="access-terminal"></a>Accessing stats in-game
 You can access your statistics by using the terminal.
 When you type in the `help` command, you'll see that there is a new category called `STATS`.
 `stats` - displays available options. After using this command, you will be able to use the other commands.
@@ -27,18 +27,18 @@ When you type in the `help` command, you'll see that there is a new category cal
 `shopping` - shows information about store purchases.
 `moons` - shows your expedition log
 
-##Stats file location
+## Stats file location
 Saved statistics can be found at: 
 *%APPDATA%/LocalLow/ZeekerssRBLX/Lethal Company/player_stats_data.json*
 
 ##Dependencies
 `TerminalAPI` - for new terminal commands
 
-###Notes
+### Notes
 This mod is still heavily in development, but should at least be usable now. If you find any bug, please do not hesitate to create an issue on Github.
 Should be compatible with some of the mods that prevent losing loot on death when solo.
 
-###Known issues
+### Known issues
 - There might be a problem with the mod sometimes not counting the beehive when players take it into the ship after departure, but it's purely visual and it is still saved, just doesn't display in the summary window
 - There might be problems with tracking some of the deaths (known ones are listed below)
     - Masked
