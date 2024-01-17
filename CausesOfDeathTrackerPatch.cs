@@ -3,6 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace LethalCompanyStatTracker {
     internal class CausesOfDeathTrackerPatch {
@@ -213,6 +214,21 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         static void CompanyMonsterDeath(int playerID) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COMPANY_MONSTER);//, StartOfRound.Instance.allPlayerScripts[playerID].playerClientId);
+        }
+
+        private static FieldInfo PlayerKilledByMask_FieldInfo;
+        [HarmonyPrefix]
+        [HarmonyWrapSafe]
+        [HarmonyPatch(typeof(HauntedMaskItem), "waitForMimicEnemySpawn")]
+        static void HauntedMaskDeath(HauntedMaskItem __instance) {
+            if (PlayerKilledByMask_FieldInfo == null) {
+                PlayerKilledByMask_FieldInfo = __instance.GetType().GetField("previousPlayerHeldBy", BindingFlags.NonPublic);
+            }
+
+            var controller = PlayerKilledByMask_FieldInfo.GetValue(__instance) as PlayerControllerB;
+            if (controller != null) {
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.PUTTING_ON_MASK);
+            }
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "KillPlayer")]

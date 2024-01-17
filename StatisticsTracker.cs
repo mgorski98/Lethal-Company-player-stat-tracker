@@ -208,7 +208,7 @@ namespace LethalCompanyStatTracker {
         }
 
         public GrabbableObject[] GetAllCollectedScrap() {
-            return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed)).ToArray();
+            return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed || go.isHeld)).ToArray();
         }
 
         #region Progress persistence
