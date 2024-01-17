@@ -39,33 +39,36 @@ namespace LethalCompanyStatTracker {
         }
         //for some problematic enemies who fire the event multiple times (like Earth Leviathan or Coil Heads)
         private static Dictionary<int, (PlayerControllerB, EnemyAI)> EnemyKillDict = new Dictionary<int, (PlayerControllerB, EnemyAI)>();
+        private static Dictionary<int, PlayerControllerB> MaskKills = new Dictionary<int, PlayerControllerB>();
+        private const int COIL_HEAD_KILL_ANIM_ID = 2;
 
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
         [HarmonyPostfix]
         [HarmonyWrapSafe]
-        static void JesterAIPatch(int playerId) {
+        static void JesterAIPatch() {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.JESTER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
         }
 
-        [HarmonyPatch(typeof(SpringManAI), "OnCollideWithPlayer")]
-        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlayerControllerB), "KillPlayer")]
+        [HarmonyPrefix]
         [HarmonyWrapSafe]
-        static void CoilheadAIPatch(SpringManAI __instance, Collider other) {
-            var playerController = __instance.MeetsStandardPlayerCollisionConditions(other);
-            if (playerController == null)
-                return;
-            var id = playerController.playerClientId;
-
-            if ((playerController.health <= 0 || playerController.isPlayerDead) && CanBeKilled(playerController, __instance)) {
-                HandleKill(DeathCauseConstants.COILHEAD, playerController, __instance);
+        static void CoilheadAIPatch(int deathAnimation) {
+            if (deathAnimation == COIL_HEAD_KILL_ANIM_ID) {
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.COILHEAD);
             }
         }
 
         [HarmonyPatch(typeof(CrawlerAI), "EatPlayerBodyAnimation")]
-        [HarmonyPrefix]
+        [HarmonyPostfix]
         [HarmonyWrapSafe]
-        static void ThumperAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.THUMPER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+        static void ThumperAIPatch(CrawlerAI __instance, int playerId) {
+            var controller = StartOfRound.Instance.allPlayerScripts[playerId];
+            if (controller == null) {
+                return;
+            }
+            if (CanBeKilled(controller, __instance) && (controller.health <= 0 || controller.isPlayerDead)) {
+                HandleKill(DeathCauseConstants.THUMPER, controller, __instance);
+            }
         }
 
         [HarmonyPatch(typeof(MouthDogAI), "KillPlayer")]
@@ -89,7 +92,7 @@ namespace LethalCompanyStatTracker {
             var playerController = other.GetComponent<PlayerControllerB>();
             if (playerController == null)
                 return;
-            if ((playerController.health <= 0 || playerController.isPlayerDead)) {
+            if (playerController.health <= 0 || playerController.isPlayerDead) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SPORE_DOG);//, playerController.playerClientId);
             }
         }
@@ -117,21 +120,26 @@ namespace LethalCompanyStatTracker {
         }
 
         [HarmonyPatch(typeof(NutcrackerEnemyAI), "LegKickPlayer")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyWrapSafe]
-        static void NutcrackerKickAIPatch(int playerId) {
-            StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NUTCRACKER);//, StartOfRound.Instance.allPlayerScripts[playerId].playerClientId);
+        static void NutcrackerKickAIPatch(NutcrackerEnemyAI __instance, int playerId) {
+            var controller = StartOfRound.Instance.allPlayerScripts[playerId];
+            if (controller == null)
+                return;
+            if (!controller.isPlayerDead && CanBeKilled(controller, __instance)) {
+                HandleKill(DeathCauseConstants.NUTCRACKER, controller, __instance);
+            }
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
         [HarmonyWrapSafe]
-        static void NutcrackerShotgunAnFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
+        static void NutcrackerShotgunAndFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
             var player = __instance;
             if (player == null)
                 return;
 
-            if (player.isPlayerDead) {
+            if (player.isPlayerDead || player.health <= 0) {
                 var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
                 StatisticsTracker.Instance.OnPlayerDeath(cause);//, player.playerClientId);
             }
@@ -151,7 +159,7 @@ namespace LethalCompanyStatTracker {
         }
 
         [HarmonyPatch(typeof(HoarderBugAI), "OnCollideWithPlayer")]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyWrapSafe]
         static void LootbugAIPatch(HoarderBugAI __instance, Collider other) {
             var controller = other.GetComponent<PlayerControllerB>();
@@ -169,12 +177,6 @@ namespace LethalCompanyStatTracker {
         static void BaboonHawkAIPatch(int playerObject) {
             StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.BABOON);//, StartOfRound.Instance.allPlayerScripts[playerObject].playerClientId);
         }
-
-        //[HarmonyPatch(typeof(RedLocustBees), "BeesKillPlayer")]
-        //[HarmonyPostfix]
-        //static void CircuitBeesAIPatch(PlayerControllerB killedPlayer) {
-        //    StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.NOT_THE_BEES);//, id);
-        //}
 
         [HarmonyPatch(typeof(MaskedPlayerEnemy), "FinishKillAnimation")]
         [HarmonyPostfix]
@@ -219,23 +221,32 @@ namespace LethalCompanyStatTracker {
         private static FieldInfo PlayerKilledByMask_FieldInfo;
         [HarmonyPrefix]
         [HarmonyWrapSafe]
-        [HarmonyPatch(typeof(HauntedMaskItem), "waitForMimicEnemySpawn")]
+        [HarmonyPatch(typeof(HauntedMaskItem), "CreateMimicClientRpc")]
         static void HauntedMaskDeath(HauntedMaskItem __instance) {
             if (PlayerKilledByMask_FieldInfo == null) {
-                PlayerKilledByMask_FieldInfo = __instance.GetType().GetField("previousPlayerHeldBy", BindingFlags.NonPublic);
+                PlayerKilledByMask_FieldInfo = __instance.GetType().GetField("previousPlayerHeldBy", BindingFlags.NonPublic | BindingFlags.Instance);
             }
 
             var controller = PlayerKilledByMask_FieldInfo.GetValue(__instance) as PlayerControllerB;
-            if (controller != null) {
+            if (controller != null && controller.isPlayerDead && !MaskKills.ContainsKey(__instance.GetInstanceID())) {
+                MaskKills.Add(__instance.GetInstanceID(), controller);
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.PUTTING_ON_MASK);
+                controller.StartCoroutine(RemoveIDFromMaskDict(__instance.GetInstanceID()));
+                //counts as suffocation, so subtract one death from quicksand
+                StatisticsTracker.Instance.cumulativeData.causesOfDeath[DeathCauseConstants.QUICKSAND]-=1;
             }
+        }
+
+        private static IEnumerator RemoveIDFromMaskDict(int id) {
+            yield return new WaitForSeconds(1.25f);
+            MaskKills.Remove(id);
         }
 
         [HarmonyPatch(typeof(PlayerControllerB), "KillPlayer")]
         [HarmonyWrapSafe]
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         static void NonEnemiesDeathPatch(PlayerControllerB __instance, CauseOfDeath causeOfDeath) {
-            if (__instance.isPlayerDead) {
+            if (!__instance.isPlayerDead && __instance.AllowPlayerDeath()) {
                 bool isMonster = false;
                 string cause = "";
                 switch (causeOfDeath) {
