@@ -39,7 +39,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
             }, "stats");
 
             AddCommand("moons", new CommandInfo() {
-                DisplayTextSupplier = () => FormatMoonExpeditions(StatisticsTracker.Instance.cumulativeData.moonExpeditionsData),
+                DisplayTextSupplier = () => FormatMoonExpeditions(StatisticsTracker.Instance.cumulativeData.moonExpeditionsData, StatisticsTracker.Instance.cumulativeData.bestMissionStreak),
                 Category = "Stats",
                 Description = "Which of the moons were visited and how bad the weather was."
             }, "stats");
@@ -110,7 +110,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
             return sb.ToString();
         }
 
-        private static string FormatMoonExpeditions(Dictionary<string, StatisticsTracker.MoonData> moonsData) {
+        private static string FormatMoonExpeditions(Dictionary<string, StatisticsTracker.MoonData> moonsData, int bestStreak) {
             var sb = new StringBuilder();
             var moons = moonsData;
             if (moons.Count <= 0)
@@ -129,6 +129,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                     }
                     sb.AppendLine();
                 }
+                sb.AppendLine($"Best moon streak: {bestStreak} missions in a row");
             }
             return sb.ToString();
         }

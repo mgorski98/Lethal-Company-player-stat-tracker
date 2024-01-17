@@ -37,6 +37,8 @@ namespace LethalCompanyStatTracker {
             public DefaultDict<string, int> enemiesKilled = new DefaultDict<string, int>(0);
             public DefaultDict<string, ItemData> allSoldItems = new DefaultDict<string, ItemData>(() => new ItemData());
             public DefaultDict<string, ItemData> allBoughtItems = new DefaultDict<string, ItemData>(() => new ItemData());
+            public int currentSuccessfulMissionStreak = 0;
+            public int bestMissionStreak = 0;
         }
 
         [Serializable]
@@ -47,6 +49,8 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, int> enemiesKilled;
             public Dictionary<string, ItemData> allSoldItems;
             public Dictionary<string, ItemData> allBoughtItems;
+            public int currentSuccessfulMissionStreak = 0;
+            public int bestMissionStreak = 0;
 
             public SerializableStats(PlayerStatisticsData data) {
                 allCollectedItems = new Dictionary<string, ItemData>(data.allCollectedItems);
@@ -55,6 +59,8 @@ namespace LethalCompanyStatTracker {
                 enemiesKilled = new Dictionary<string, int>(data.enemiesKilled);
                 allSoldItems = new Dictionary<string, ItemData>(data.allSoldItems);
                 allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
+                currentSuccessfulMissionStreak = data.currentSuccessfulMissionStreak;
+                bestMissionStreak = data.bestMissionStreak;
             }
 
             public SerializableStats() { } //because deserialization fails when this is not present
@@ -67,6 +73,8 @@ namespace LethalCompanyStatTracker {
                 data.allBoughtItems.CopyFrom(this.allBoughtItems);
                 data.enemiesKilled.CopyFrom(this.enemiesKilled);
                 data.causesOfDeath.CopyFrom(this.causesOfDeath);
+                data.currentSuccessfulMissionStreak = this.currentSuccessfulMissionStreak;
+                data.bestMissionStreak = this.bestMissionStreak;
                 return data;
             }
         }
@@ -256,6 +264,14 @@ namespace LethalCompanyStatTracker {
 
             var data = cumulativeData.moonExpeditionsData[planetName];
             data.WeatherExpeditions[weather] += 1;
+
+            if (StartOfRound.Instance.allPlayersDead) {
+                //todo: set best streak to current streak if it's higher
+                //todo: show that yellow popup saying "Streak lost! X successful missions in a row"
+                //todo: show that the players have actually set a new record (sth like "New record streak: X missions in a row")
+            } else {
+                //todo: increase the streak
+            }
         }
 
         public void OnPlayerDeath(string causeOfDeath_Name) {

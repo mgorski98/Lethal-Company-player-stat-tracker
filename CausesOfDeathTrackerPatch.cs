@@ -131,6 +131,36 @@ namespace LethalCompanyStatTracker {
             }
         }
 
+        private static FieldInfo ShotgunItemHitColliders_FieldInfo;
+
+        [HarmonyPatch(typeof(ShotgunItem), "ShootGun")]
+        [HarmonyPostfix]
+        [HarmonyWrapSafe]
+        static void ShotgunShotPatch(ShotgunItem __instance) {
+            if (ShotgunItemHitColliders_FieldInfo == null) {
+                ShotgunItemHitColliders_FieldInfo = typeof(ShotgunItem).GetField("enemyColliders", BindingFlags.Instance | BindingFlags.NonPublic);
+            }
+
+            //still does not work
+            //todo: check if the field info is a null (yes, *again*)
+            var isNutcracker = __instance.isHeldByEnemy;
+            var caught = (RaycastHit[])ShotgunItemHitColliders_FieldInfo.GetValue(__instance);
+            foreach (var info in caught) {
+                if (info.transform != null) {
+                    if (info.transform.TryGetComponent<IHittable>(out IHittable comp)) {
+                        if (comp is PlayerControllerB) {
+                            StatisticsTracker.Instance.OnPlayerDeath(isNutcracker ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE);
+                            StatisticsTracker.Instance.cumulativeData.causesOfDeath[DeathCauseConstants.TURRET] -= 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        static void ShovelAndSignsHitPatch() {
+
+        }
+
         [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
         [HarmonyPostfix]
         [HarmonyWrapSafe]
@@ -195,7 +225,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void SnareFleaAIPatch(PlayerControllerB playerBeingKilled, bool playerDead) {
-            if (playerDead) {//TODO: subtract 1 from Quicksand death, 
+            if (playerDead) {
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SNARE_FLEA);//, playerBeingKilled.playerClientId);
                 //because Snare fleas actually are counted as CauseOfDeath.Suffocation and so also will increase counter for quicksand
                 StatisticsTracker.Instance.cumulativeData.causesOfDeath[DeathCauseConstants.QUICKSAND]-=1;
