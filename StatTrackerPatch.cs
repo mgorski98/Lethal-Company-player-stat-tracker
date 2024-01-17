@@ -3,13 +3,12 @@ using UnityEngine;
 
 namespace LethalCompanyStatTracker {
     internal class StatTrackerPatch {
-        private static StatisticsTracker Tracker;
+        private static StatisticsTracker Tracker => StatisticsTracker.Instance;
 
         [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnMoonStart() {
-            FetchTrackerIfNull();
             Tracker.SnapshotCollectedItemsOnMoonStart();
         }
 
@@ -17,7 +16,6 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnMoonExit_Initial() {
-            FetchTrackerIfNull();
             Tracker.InitialProcessOnQuit();
             Tracker.ShowCollectedItemsDialog();
         }
@@ -27,7 +25,6 @@ namespace LethalCompanyStatTracker {
         [HarmonyWrapSafe]
         static void OnMoonExit_End() {
             //this method checks items dropped on ship AND player's inventory items and stores them in stats
-            FetchTrackerIfNull();
             Tracker.ProcessOnMoonQuit();
             Tracker.UpdatePlanetExpeditionData(RoundManager.Instance.currentLevel);
         }
@@ -38,26 +35,12 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void OnScrapAdded(GrabbableObject GObject) {
-            FetchTrackerIfNull();
-            if (!Tracker.allCollectedItems.TryGetValue(GObject.itemProperties.itemName, out var data)) {
-                Tracker.allCollectedItems[GObject.itemProperties.itemName] = new StatisticsTracker.ItemData() {
-                    Count = 1,
-                    TotalPrice = GObject.scrapValue,
-                    ItemName = GObject.itemProperties.itemName
-                };
-            } else {
-                data.Count++;
-                data.TotalPrice += GObject.scrapValue;
-            }
+            var data = Tracker.cumulativeData.allCollectedItems[GObject.itemProperties.itemName];
+            data.Count++;
+            data.TotalPrice += GObject.scrapValue;
 
             Tracker.currentlyCollected.Add(GObject);
             StatTrackerMod.Logger.LogMessage($"Collected {GObject.itemProperties.itemName}, worth {GObject.scrapValue}");
-        }
-
-        private static void FetchTrackerIfNull() {
-            if (Tracker == null) {
-                Tracker = GameObject.FindObjectOfType<StatisticsTracker>();
-            }
         }
     }
 }

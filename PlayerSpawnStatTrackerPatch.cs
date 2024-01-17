@@ -1,18 +1,17 @@
 ﻿using HarmonyLib;
 using GameNetcodeStuff;
+using Unity.Netcode;
 
 namespace LethalCompanyStatTracker {
-    [HarmonyPatch(typeof(PlayerControllerB))]
+    [HarmonyPatch(typeof(StartOfRound))]
     internal class PlayerSpawnStatTrackerPatch {
-        [HarmonyPatch("InstantiateBloodPooledObjects")]
+        [HarmonyPatch("Start")]
         [HarmonyPostfix]
-        static void SpawnStatTrackOnPlayer(ref PlayerControllerB __instance) {
-            if (__instance != GameNetworkManager.Instance.localPlayerController)
-                return;
-            if (!__instance.TryGetComponent(out StatisticsTracker _tracker))
+        static void SpawnStatTrackOnPlayer(ref StartOfRound __instance) {
+            if (!__instance.TryGetComponent(out StatisticsTracker _tracker)) {
+                StatTrackerMod.Logger.LogMessage($"Spawned stat tracker");
                 __instance.gameObject.AddComponent<StatisticsTracker>();
-
-            StatTrackerMod.Logger.LogMessage($"Spawned stat tracker on player {__instance.playerUsername}");
+            }
         }
     }
 }

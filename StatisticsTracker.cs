@@ -12,14 +12,12 @@ namespace LethalCompanyStatTracker {
 
         [Serializable]
         public class ItemData {
-            public int Count;
-            public string ItemName;
-            public int TotalPrice;
+            public int Count = 0;
+            public int TotalPrice = 0;
         }
 
         [Serializable]
         public class MoonData {
-            public string MoonName;
             public Dictionary<LevelWeatherType, int> WeatherExpeditions = new Dictionary<LevelWeatherType, int>();
             [JsonIgnore]
             public int TotalExpeditionsCount => WeatherExpeditions.Sum(kvp => kvp.Value);
@@ -33,23 +31,52 @@ namespace LethalCompanyStatTracker {
 
         [Serializable]
         public class PlayerStatisticsData {
+            public DefaultDict<string, ItemData> allCollectedItems = new DefaultDict<string, ItemData>(() => new ItemData());
+            public DefaultDict<string, MoonData> moonExpeditionsData = new DefaultDict<string, MoonData>(() => new MoonData());
+            public DefaultDict<string, int> causesOfDeath = new DefaultDict<string, int>(0);
+            public DefaultDict<string, int> enemiesKilled = new DefaultDict<string, int>(0);
+            public DefaultDict<string, ItemData> allSoldItems = new DefaultDict<string, ItemData>(() => new ItemData());
+            public DefaultDict<string, ItemData> allBoughtItems = new DefaultDict<string, ItemData>(() => new ItemData());
+        }
+
+        [Serializable]
+        public class SerializableStats {
             public Dictionary<string, ItemData> allCollectedItems;
             public Dictionary<string, MoonData> moonExpeditionsData;
             public Dictionary<string, int> causesOfDeath;
             public Dictionary<string, int> enemiesKilled;
             public Dictionary<string, ItemData> allSoldItems;
             public Dictionary<string, ItemData> allBoughtItems;
+
+            public SerializableStats(PlayerStatisticsData data) {
+                allCollectedItems = new Dictionary<string, ItemData>(data.allCollectedItems);
+                moonExpeditionsData = new Dictionary<string, MoonData>(data.moonExpeditionsData);
+                causesOfDeath = new Dictionary<string, int>(data.causesOfDeath);
+                enemiesKilled = new Dictionary<string, int>(data.enemiesKilled);
+                allSoldItems = new Dictionary<string, ItemData>(data.allSoldItems);
+                allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
+            }
+
+            public SerializableStats() { }
+
+            public PlayerStatisticsData ToStatsData() {
+                var data = new PlayerStatisticsData();
+                data.allCollectedItems.CopyFrom(this.allCollectedItems);
+                data.moonExpeditionsData.CopyFrom(this.moonExpeditionsData);
+                data.allSoldItems.CopyFrom(this.allSoldItems);
+                data.allBoughtItems.CopyFrom(this.allBoughtItems);
+                data.enemiesKilled.CopyFrom(this.enemiesKilled);
+                data.causesOfDeath.CopyFrom(this.causesOfDeath);
+                return data;
+            }
         }
 
 
         private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
         public HashSet<GrabbableObject> currentlyCollected = new HashSet<GrabbableObject>();
-        public Dictionary<string, ItemData> allCollectedItems = new Dictionary<string, ItemData>();
-        public Dictionary<string, MoonData> moonExpeditionsData = new Dictionary<string, MoonData>();
-        public Dictionary<string, int> causesOfDeath = new Dictionary<string, int>();
-        public Dictionary<string, int> enemiesKilled = new Dictionary<string, int>();
-        public Dictionary<string, ItemData> allSoldItems = new Dictionary<string, ItemData>();
-        public Dictionary<string, ItemData> allBoughtItems = new Dictionary<string, ItemData>();
+
+        public PlayerStatisticsData cumulativeData = new PlayerStatisticsData();
+        public PlayerStatisticsData currentSessionData = new PlayerStatisticsData();
 
         private GrabbableObject[] currentNewItems;
 
@@ -58,10 +85,12 @@ namespace LethalCompanyStatTracker {
         public static StatisticsTracker Instance { get; private set; } = null;
 
         private void Awake() {
-            if (Instance == null)
+            if (Instance == null) {
                 Instance = this;
+                MakeStatsFileCopy();
+                LoadProgress();
+            }
             else Destroy(this);
-            MakeStatsFileCopy();
         }
 
         void OnDestroy() {
@@ -101,17 +130,10 @@ namespace LethalCompanyStatTracker {
             var newItems = allItems.Where(item => !itemsSnapshot.Contains(item) && !currentlyCollected.Contains(item)).ToArray();
 
             foreach (var item in newItems) {
-                if (!allCollectedItems.TryGetValue(item.itemProperties.itemName, out var data)) {
-                    data = new ItemData {
-                        ItemName = item.itemProperties.itemName,
-                        Count = 1,
-                        TotalPrice = item.scrapValue
-                    };
-                    allCollectedItems[item.itemProperties.itemName] = data;
-                } else {
-                    data.Count++;
-                    data.TotalPrice += item.scrapValue;
-                }
+                var name = item.itemProperties.itemName;
+                var data = cumulativeData.allCollectedItems[name];
+                data.Count++;
+                data.TotalPrice += item.scrapValue;
             }
             currentNewItems = newItems;
             var creditsEarned = newItems.Sum(i => i.scrapValue);
@@ -120,7 +142,7 @@ namespace LethalCompanyStatTracker {
                 StatTrackerMod.Logger.LogMessage($"{item.itemProperties.itemName} : {item.scrapValue}");
             }
 
-            foreach (var itemPair in allCollectedItems) {
+            foreach (var itemPair in cumulativeData.allCollectedItems) {
                 string name = itemPair.Key;
                 ItemData data = itemPair.Value;
 
@@ -145,14 +167,9 @@ namespace LethalCompanyStatTracker {
         public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal) {
             foreach (var itemIndex in boughtItems) {
                 var item = terminal.buyableItemsList[itemIndex];
-                var name = item.itemName;
-                if (!allBoughtItems.TryGetValue(name, out var data)) {
-                    var newData = new ItemData() { TotalPrice = -1, Count = 1, ItemName = name };
-                    allBoughtItems[name] = newData;
-                } else {
-                    data.Count++;
-                }
-
+                var data = cumulativeData.allBoughtItems[item.itemName];
+                data.Count++;
+                data.TotalPrice = -1;
             }
             StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items");
         }
@@ -160,17 +177,9 @@ namespace LethalCompanyStatTracker {
         public void StoreSoldItems(GrabbableObject[] obj) {
             foreach (var item in obj) {
                 var i = item.itemProperties;
-                if (allSoldItems.TryGetValue(i.itemName, out var data)) {
-                    var newData = new ItemData() {
-                        ItemName = i.itemName,
-                        Count = 1,
-                        TotalPrice = Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate)
-                    };
-                    allSoldItems[i.itemName] = newData;
-                } else {
-                    data.Count++;
-                    data.TotalPrice += Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate);
-                }
+                var data = cumulativeData.allSoldItems[i.itemName];
+                data.Count++;
+                data.TotalPrice += Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate);
             }
             StatTrackerMod.Logger.LogMessage($"Stored {obj.Length} sold items.");
         }
@@ -204,18 +213,11 @@ namespace LethalCompanyStatTracker {
 
         #region Progress persistence
         private void SaveProgress() {
-            var data = new PlayerStatisticsData {
-                enemiesKilled = this.enemiesKilled,
-                allCollectedItems = this.allCollectedItems,
-                causesOfDeath = this.causesOfDeath, 
-                moonExpeditionsData = this.moonExpeditionsData,
-                allSoldItems = this.allSoldItems,
-                allBoughtItems = this.allBoughtItems
-            };
-
-            var json = JsonConvert.SerializeObject(data, Formatting.Indented);
+            var serializableCumulativeData = new SerializableStats(cumulativeData);
+            var json = JsonConvert.SerializeObject(serializableCumulativeData, Formatting.Indented);
+            StatTrackerMod.Logger.LogMessage(json);
             File.WriteAllText(StatsStoreFilePath, json);
-            StatTrackerMod.Logger.LogMessage($"Saved stats progress!");
+            StatTrackerMod.Logger.LogMessage($"Saved global stats progress!");
         }
 
         private void LoadProgress() {
@@ -227,13 +229,9 @@ namespace LethalCompanyStatTracker {
             }
 
             var json = File.ReadAllText(path);
-            var data = JsonConvert.DeserializeObject<PlayerStatisticsData>(json);
-            allCollectedItems = data.allCollectedItems;
-            causesOfDeath = data.causesOfDeath;
-            enemiesKilled = data.enemiesKilled;
-            moonExpeditionsData = data.moonExpeditionsData;
-            allSoldItems = data.allSoldItems;
-            allBoughtItems = data.allBoughtItems;
+            var serializableCumulativeData = JsonConvert.DeserializeObject<SerializableStats>(json);
+            StatTrackerMod.Logger.LogMessage(json);
+            cumulativeData = serializableCumulativeData.ToStatsData();
             StatTrackerMod.Logger.LogMessage("Loaded stats file.");
         }
 
@@ -256,46 +254,27 @@ namespace LethalCompanyStatTracker {
             var planetName = level.PlanetName;
             var weather = level.currentWeather;
 
-            if (!moonExpeditionsData.TryGetValue(planetName, out var data)) {
-                var newData = new MoonData() {
-                    MoonName = planetName
-                };
-
-                newData.WeatherExpeditions[weather] = 1;
-                moonExpeditionsData[planetName] = newData;
-            } else {
-                if (!data.WeatherExpeditions.ContainsKey(weather)) {
-                    data.WeatherExpeditions[weather] = 1;
-                } else {
-                    data.WeatherExpeditions[weather] = data.WeatherExpeditions[weather] + 1;
-                }
-            }
+            var data = cumulativeData.moonExpeditionsData[planetName];
+            data.WeatherExpeditions[weather] += 1;
         }
 
         public void OnPlayerDeath(string causeOfDeath_Name) {
             if (string.IsNullOrWhiteSpace(causeOfDeath_Name))
                 return;
-            if (!causesOfDeath.TryGetValue(causeOfDeath_Name, out int count)) {
-                causesOfDeath[causeOfDeath_Name] = 1;
-                StatTrackerMod.Logger.LogMessage($"first death by: {causeOfDeath_Name}");
-            } else {
-                causesOfDeath[causeOfDeath_Name] = count + 1;
-                StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {count+1}, old: {count}");
-            }
+            var old = cumulativeData.causesOfDeath[causeOfDeath_Name];
+            cumulativeData.causesOfDeath[causeOfDeath_Name] += 1;
 
-            foreach (var kvp in causesOfDeath) {
+            StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {cumulativeData.causesOfDeath[causeOfDeath_Name]}, old: {old}");
+
+            foreach (var kvp in cumulativeData.causesOfDeath) {
                 StatTrackerMod.Logger.LogMessage($"Deaths by {kvp.Key}: {kvp.Value}");
             }
         }
 
         public void OnEnemyKilled(string enemyKilledName) {
-            if (!enemiesKilled.TryGetValue(enemyKilledName, out int count)) {
-                enemiesKilled[enemyKilledName] = 1;
-            } else {
-                enemiesKilled[enemyKilledName] = count+1;
-            }
-
-            StatTrackerMod.Logger.LogMessage($"Killed a total of {count + 1} enemies (previously {count})");
+            var old = cumulativeData.enemiesKilled[enemyKilledName];
+            cumulativeData.enemiesKilled[enemyKilledName] += 1;
+            StatTrackerMod.Logger.LogMessage($"Killed a total of {cumulativeData.enemiesKilled[enemyKilledName]} enemies (previously {old})");
         }
 
         #endregion

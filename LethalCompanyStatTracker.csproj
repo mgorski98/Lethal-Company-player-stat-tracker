@@ -80,6 +80,7 @@
   <ItemGroup>
     <Compile Include="BoughtItemsStorePatch.cs" />
     <Compile Include="CausesOfDeathTrackerPatch.cs" />
+    <Compile Include="DefaultDict.cs" />
     <Compile Include="DepositItemsDeskPatch.cs" />
     <Compile Include="EnemyKillsTrackerPatch.cs" />
     <Compile Include="PlayerSpawnStatTrackerPatch.cs" />
