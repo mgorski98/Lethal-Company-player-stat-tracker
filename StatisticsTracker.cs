@@ -57,7 +57,7 @@ namespace LethalCompanyStatTracker {
                 allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
             }
 
-            public SerializableStats() { }
+            public SerializableStats() { } //because deserialization fails when this is not present
 
             public PlayerStatisticsData ToStatsData() {
                 var data = new PlayerStatisticsData();
@@ -87,8 +87,6 @@ namespace LethalCompanyStatTracker {
         private void Awake() {
             if (Instance == null) {
                 Instance = this;
-                MakeStatsFileCopy();
-                LoadProgress();
             }
             else Destroy(this);
         }
@@ -101,7 +99,9 @@ namespace LethalCompanyStatTracker {
         }
 
         private void Start() {
+            MakeStatsFileCopy();
             LoadProgress();
+            SnapshotCollectedItemsOnMoonStart();
             StatTrackerMod.Logger.LogMessage("Initialized the stat tracker module");
         }
 

@@ -34,6 +34,7 @@ namespace LethalCompanyStatTracker {
             public const string FRIENDLY_FIRE = "Friendly fire";
             public const string LIGHTNING_STRIKE = "Lightning";
             public const string QUICKSAND = "Quicksand";
+            public const string PUTTING_ON_MASK = "Comedy & Tragedy masks";
         }
         //for some problematic enemies who fire the event multiple times (like Earth Leviathan or Coil Heads)
         private static Dictionary<int, (PlayerControllerB, EnemyAI)> EnemyKillDict = new Dictionary<int, (PlayerControllerB, EnemyAI)>();
@@ -191,8 +192,10 @@ namespace LethalCompanyStatTracker {
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         static void SnareFleaAIPatch(PlayerControllerB playerBeingKilled, bool playerDead) {
-            if (playerDead) {
+            if (playerDead) {//TODO: subtract 1 from Quicksand death, 
                 StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.SNARE_FLEA);//, playerBeingKilled.playerClientId);
+                //because Snare fleas actually are counted as CauseOfDeath.Suffocation and so also will increase counter for quicksand
+                StatisticsTracker.Instance.cumulativeData.causesOfDeath[DeathCauseConstants.QUICKSAND]-=1;
             }
         }
 

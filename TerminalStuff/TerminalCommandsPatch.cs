@@ -73,7 +73,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                 int totalValue = 0;
                 sb.AppendLine("Collected items:");
                 foreach (var kvp in src) {
-                    sb.AppendLine($"- {kvp.Key} : {kvp.Value.Count} units, worth {kvp.Value.TotalPrice} credits in total");
+                    sb.AppendLine($"- {kvp.Key} : {kvp.Value.Count} units, worth {kvp.Value.TotalPrice}");
                     totalValue += kvp.Value.TotalPrice;
                     totalItems += kvp.Value.Count;
                 }
