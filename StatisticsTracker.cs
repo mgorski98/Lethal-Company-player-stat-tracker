@@ -39,6 +39,13 @@ namespace LethalCompanyStatTracker {
             public DefaultDict<string, ItemData> allBoughtItems = new DefaultDict<string, ItemData>(() => new ItemData());
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
+            public int highestQuotaReached = 0;
+            public long totalJumps = 0;
+            public long totalSteps = 0;
+            public long totalDamage = 0;
+            public long totalMoneySpent = 0;
+            public int totalTimesQuotaFulfilled = 0;
+            public int bodiesInsured = 0;
         }
 
         [Serializable]
@@ -51,6 +58,13 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, ItemData> allBoughtItems;
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
+            public int highestQuotaReached = 0;
+            public long totalJumps = 0;
+            public long totalSteps = 0;
+            public long totalDamage = 0;
+            public long totalMoneySpent = 0;
+            public int totalTimesQuotaFulfilled = 0;
+            public int bodiesInsured = 0;
 
             public SerializableStats(PlayerStatisticsData data) {
                 allCollectedItems = new Dictionary<string, ItemData>(data.allCollectedItems);
@@ -61,6 +75,13 @@ namespace LethalCompanyStatTracker {
                 allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
                 currentSuccessfulMissionStreak = data.currentSuccessfulMissionStreak;
                 bestMissionStreak = data.bestMissionStreak;
+                highestQuotaReached = data.highestQuotaReached;
+                totalSteps = data.totalSteps;
+                totalJumps = data.totalJumps;
+                totalDamage = data.totalDamage;
+                totalMoneySpent = data.totalMoneySpent;
+                totalTimesQuotaFulfilled = data.totalTimesQuotaFulfilled;
+                bodiesInsured = data.bodiesInsured;
             }
 
             public SerializableStats() { } //because deserialization fails when this is not present
@@ -75,6 +96,13 @@ namespace LethalCompanyStatTracker {
                 data.causesOfDeath.CopyFrom(this.causesOfDeath);
                 data.currentSuccessfulMissionStreak = this.currentSuccessfulMissionStreak;
                 data.bestMissionStreak = this.bestMissionStreak;
+                data.highestQuotaReached = this.highestQuotaReached;
+                data.totalDamage = totalDamage;
+                data.totalSteps = totalSteps;
+                data.totalJumps = totalJumps;
+                data.totalMoneySpent = totalMoneySpent;
+                data.totalTimesQuotaFulfilled = totalTimesQuotaFulfilled;
+                data.bodiesInsured = bodiesInsured;
                 return data;
             }
         }
@@ -133,6 +161,14 @@ namespace LethalCompanyStatTracker {
             currentNewItems = newItems;
         }
 
+        public void UpdateHighestQuotaReached() {
+            var quota = TimeOfDay.Instance.profitQuota;
+            StatTrackerMod.Logger.LogMessage("Current profit quota: " + quota);
+
+            if (quota > cumulativeData.highestQuotaReached)
+                cumulativeData.highestQuotaReached = quota;
+        }
+
         public void ProcessOnMoonQuit() {
             var allItems = GetAllCollectedScrap();
             var newItems = allItems.Where(item => !itemsSnapshot.Contains(item) && !currentlyCollected.Contains(item)).ToArray();
@@ -172,24 +208,52 @@ namespace LethalCompanyStatTracker {
             StartCoroutine(ReturnToOldProfitWindowTitle());
         }
 
-        public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal) {
+        public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal, int totalCost) {
+            if (boughtItems.Length <= 0)
+                return;
+            var costPerItem = totalCost / boughtItems.Length;
             foreach (var itemIndex in boughtItems) {
                 var item = terminal.buyableItemsList[itemIndex];
                 var data = cumulativeData.allBoughtItems[item.itemName];
                 data.Count++;
-                data.TotalPrice = -1;
+                data.TotalPrice += costPerItem;
             }
-            StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items");
+            StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items, worth {totalCost}");
         }
 
         public void StoreSoldItems(GrabbableObject[] obj) {
+            int bodies = 0;
             foreach (var item in obj) {
+                if (item is RagdollGrabbableObject) {
+                    bodies++;
+                    continue;
+                }
                 var i = item.itemProperties;
                 var data = cumulativeData.allSoldItems[i.itemName];
                 data.Count++;
                 data.TotalPrice += Mathf.RoundToInt(item.scrapValue * StartOfRound.Instance.companyBuyingRate);
             }
-            StatTrackerMod.Logger.LogMessage($"Stored {obj.Length} sold items.");
+            StatTrackerMod.Logger.LogMessage($"Stored {obj.Length - bodies} sold items.");
+        }
+
+        public void HandleEndOfGame() {
+            //todo: also reset some things if applicable
+            var stats = StartOfRound.Instance.gameStats;
+            StatTrackerMod.Logger.LogMessage($"Fetching game stats, old values: steps:{cumulativeData.totalSteps}, jumps:{cumulativeData.totalJumps},damage:{cumulativeData.totalDamage}");
+            cumulativeData.totalSteps += stats.allStepsTaken;
+            foreach (var stat in stats.allPlayerStats) {
+                cumulativeData.totalJumps += stat.jumps;
+                cumulativeData.totalDamage += stat.damageTaken;
+            }
+            cumulativeData.totalTimesQuotaFulfilled += TimeOfDay.Instance.timesFulfilledQuota;
+            StatTrackerMod.Logger.LogMessage($"Fetching game stats, new values: steps:{cumulativeData.totalSteps}, jumps:{cumulativeData.totalJumps},damage:{cumulativeData.totalDamage}");
+        }
+
+        public void UpdateCreditsSpent(int oldCredits, int newCredits) {
+            var diff = newCredits - oldCredits;
+            if (diff < 0) {
+                cumulativeData.totalMoneySpent = Mathf.Abs(diff);
+            }
         }
 
         private TextMeshProUGUI ProfitWindowTitle;
@@ -216,7 +280,7 @@ namespace LethalCompanyStatTracker {
         }
 
         public GrabbableObject[] GetAllCollectedScrap() {
-            return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed || go.isHeld)).ToArray();
+            return GameObject.FindObjectsByType<GrabbableObject>(FindObjectsSortMode.None).Where(go => go.itemProperties.isScrap && (go.isInShipRoom || go.isPocketed || go.isHeld) && !(go is RagdollGrabbableObject)).ToArray();
         }
 
         #region Progress persistence
@@ -266,11 +330,21 @@ namespace LethalCompanyStatTracker {
             data.WeatherExpeditions[weather] += 1;
 
             if (StartOfRound.Instance.allPlayersDead) {
-                //todo: set best streak to current streak if it's higher
-                //todo: show that yellow popup saying "Streak lost! X successful missions in a row"
-                //todo: show that the players have actually set a new record (sth like "New record streak: X missions in a row")
+                string header;
+                string body;
+                if (cumulativeData.currentSuccessfulMissionStreak > cumulativeData.bestMissionStreak) {
+                    header = "New streak record!";
+                    body = $"You made a new mission streak record! A total of {cumulativeData.currentSuccessfulMissionStreak} successful missions in a row! Congrats!";
+                    cumulativeData.bestMissionStreak = cumulativeData.currentSuccessfulMissionStreak;
+                } else {
+                    header = "Streak lost!";
+                    body = $"You reached {cumulativeData.currentSuccessfulMissionStreak} successful missions in a row!";
+                }
+                HUDManager.Instance.DisplayTip(header, body);
+                cumulativeData.currentSuccessfulMissionStreak = 0;
             } else {
-                //todo: increase the streak
+                cumulativeData.currentSuccessfulMissionStreak++;
+                StatTrackerMod.Logger.LogMessage($"Current streak: {cumulativeData.currentSuccessfulMissionStreak}");
             }
         }
 
@@ -281,10 +355,6 @@ namespace LethalCompanyStatTracker {
             cumulativeData.causesOfDeath[causeOfDeath_Name] += 1;
 
             StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {cumulativeData.causesOfDeath[causeOfDeath_Name]}, old: {old}");
-
-            foreach (var kvp in cumulativeData.causesOfDeath) {
-                StatTrackerMod.Logger.LogMessage($"Deaths by {kvp.Key}: {kvp.Value}");
-            }
         }
 
         public void OnEnemyKilled(string enemyKilledName) {

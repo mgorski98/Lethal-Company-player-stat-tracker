@@ -57,10 +57,21 @@ namespace LethalCompanyStatTracker.TerminalStuff {
             }, "stats");
 
             AddCommand("shopping", new CommandInfo() {
-                DisplayTextSupplier = () => FormatBoughtItems(StatisticsTracker.Instance.cumulativeData.allBoughtItems),
+                DisplayTextSupplier = () => FormatBoughtItems(StatisticsTracker.Instance.cumulativeData.allBoughtItems, StatisticsTracker.Instance.cumulativeData.totalMoneySpent),
                 Description = "Shows statistics regarding shopping and expenses.",
                 Category = "Stats"
             }, "stats");
+
+            AddCommand("general", new CommandInfo() {
+                Description = "",
+                Category = "Stats",
+                DisplayTextSupplier = () => FormatGeneralStats(StatisticsTracker.Instance.cumulativeData)
+            }, "stats");
+        }
+
+        private static string FormatGeneralStats(StatisticsTracker.PlayerStatisticsData data) {
+            var sb = new StringBuilder();
+            return sb.ToString();
         }
 
         private static string FormatCollectedScrap(Dictionary<string, StatisticsTracker.ItemData> scrapData) {
@@ -77,6 +88,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                     totalValue += kvp.Value.TotalPrice;
                     totalItems += kvp.Value.Count;
                 }
+                //todo: format bodies insured too
                 var mostCommon = src.OrderByDescending(kvp => kvp.Value.Count).First();
                 var leastCommon = src.OrderBy(kvp => kvp.Value.Count).First();
                 sb.AppendLine($"Most common item: {mostCommon.Key}, appeared {mostCommon.Value.Count} times, worth a total of {mostCommon.Value.TotalPrice} credits");
@@ -177,7 +189,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
             return sb.ToString();
         }
 
-        private static string FormatBoughtItems(Dictionary<string, StatisticsTracker.ItemData> itemsData) {
+        private static string FormatBoughtItems(Dictionary<string, StatisticsTracker.ItemData> itemsData, long totalCreditsSpent) {
             var src = itemsData;
             var sb = new StringBuilder();
 
@@ -194,7 +206,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                 var leastBought_pair = src.OrderBy(kvp => kvp.Value.Count).First();
                 sb.Append("Most bought item: ").Append(mostBought_pair.Key).Append(", bought ").Append(mostBought_pair.Value.Count).Append(" times\n");
                 sb.Append("Least bought item: ").Append(leastBought_pair.Key).Append(", bought ").Append(leastBought_pair.Value.Count).Append(" times\n");
-                sb.Append("Total bought: ").Append(src.Values.Sum(d => d.Count)).Append(" items, worth a total of ").Append(src.Values.Sum(d => d.TotalPrice)).Append(" credits\n");
+                sb.Append("Total bought: ").Append(src.Values.Sum(d => d.Count)).Append(" items, worth a total of ").Append(totalCreditsSpent).Append(" credits\n");
             }
 
             return sb.ToString();
