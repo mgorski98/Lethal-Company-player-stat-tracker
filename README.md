@@ -5,18 +5,21 @@ A mod to track your own statistics, as well as your team's. Have you ever wanted
 ## Features
 - Tracking collected scrap (how much it's worth, how much of each item, etc.)
 - Tracking scrap sales (because let's face it, all of you lost some valuable items ;))
-- (TESTING) Tracking character deaths & their sources (let's see what is the most lethal cause! Pun intended)
+- Tracking character deaths & their sources (let's see what is the most lethal cause! Pun intended)
 - (IN PROGRESS) Tracking bought items
 - Tracking creature kills (friendly fire too :))
 - Tracking the moon expeditions (how many times you went to e.g. Titan and what the weather was like)
 - Summary of items collected on a moon expedition (uses the same window as when you sell the scrap and it tells you how much you earned)
 - Access to your current stats through the terminal
-- (PLANNED) Tracking the same things the game currently does (steps, etc.) but cumulative across saves
-- (PLANNED) Backing up the files after each game
+- Tracking the same things the game currently does (steps, etc.) but cumulative across saves
+- Backing up the files after each game
+- Tracking best mission streak without all players dying
+- Tracking all the money spent
+- (IN PROGRESS) Tracking highest quota reached and the amount of time quota was fulfilled
 
-** Please note all the stats are saved locally and also track your teammates.**
+**Please note all the stats are saved locally and also track your teammates.**
 
-## <a name="access-terminal"></a>Accessing stats in-game
+## Accessing stats in-game
 You can access your statistics by using the terminal.
 When you type in the `help` command, you'll see that there is a new category called `STATS`.
 - `stats` - displays available options. After using this command, you will be able to use the other commands.
@@ -26,6 +29,7 @@ When you type in the `help` command, you'll see that there is a new category cal
 - `sales` - displays how many items were sold to the Company and how much money it gave you.
 - `shopping` - shows information about store purchases.
 - `moons` - shows your expedition log
+- `general` - shows general stats, like steps taken, jumps taken, best streak, total money earned & spent, etc. (IN PROGRESS)
 
 ## Stats file location
 Saved statistics can be found at: 
@@ -40,9 +44,9 @@ Should be compatible with some of the mods that prevent losing loot on death whe
 
 ### Known issues
 - There might be a problem with the mod sometimes not counting the beehive when players take it into the ship after departure, but it's purely visual and it is still saved, just doesn't display in the summary window
+- Terminal only works when you are the host and so might need the host to also install the mod (i'm working on it if it can be done client side only)
 - There might be problems with tracking some of the deaths (known ones are listed below)
-    - Masked
-    - Drowning
-    - Circuit Bees
-    - Nutcracker
+    - Hoarding bugs (reports multiple times instead of once)
+    - Nutcracker (tracking the shotgun kills as nutcracker kills is pretty tricky as they actually report as turrets for now)
     - Lightning (but due to the nature of how it is coded it's probably not possible to fix it)
+    - Friendly fire is yet to be tested
