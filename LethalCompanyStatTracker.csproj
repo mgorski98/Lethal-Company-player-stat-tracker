@@ -16,11 +16,12 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
+    <Optimize>true</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -65,8 +66,20 @@
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -83,6 +96,7 @@
     <Compile Include="DefaultDict.cs" />
     <Compile Include="DepositItemsDeskPatch.cs" />
     <Compile Include="EnemyKillsTrackerPatch.cs" />
+    <Compile Include="MethodRedirect.cs" />
     <Compile Include="PlayerSpawnStatTrackerPatch.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

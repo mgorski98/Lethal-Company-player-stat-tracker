@@ -3,6 +3,8 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using LethalCompanyStatTracker.TerminalStuff;
+using UnityEngine;
+using System.Reflection;
 
 namespace LethalCompanyStatTracker
 {
@@ -31,6 +33,7 @@ namespace LethalCompanyStatTracker
         void Awake() {
             foreach (var patchType in Patches)
                 HarmonyClient.PatchAll(patchType);
+
             Logger.LogMessage("Initialized correctly!");
         }
     }

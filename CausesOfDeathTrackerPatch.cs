@@ -27,7 +27,7 @@ namespace LethalCompanyStatTracker {
             public const string SPIDER = "Bunker spider";
             public const string NOT_THE_BEES = "Circuit bees";
             public const string MINE = "Landmines & Lightning"; // because they use the same explosion particles it is almost impossible to differentiate which one killed the player
-            public const string TURRET = "Turret";
+            public const string GUNSHOTS = "Gunshots (nutcracker & turrets)";
             public const string EXT_LADDER = "Extension ladder";
             public const string COMPANY_MONSTER = "Jeb (AKA Company Monster)";
             public const string DROWNING = "Drowning";
@@ -41,6 +41,8 @@ namespace LethalCompanyStatTracker {
         private static Dictionary<int, (PlayerControllerB, EnemyAI)> EnemyKillDict = new Dictionary<int, (PlayerControllerB, EnemyAI)>();
         private static Dictionary<int, PlayerControllerB> MaskKills = new Dictionary<int, PlayerControllerB>();
         private const int COIL_HEAD_KILL_ANIM_ID = 2;
+
+        private static ShotgunItem currentShotgunInstance;
 
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
         [HarmonyPostfix]
@@ -131,47 +133,12 @@ namespace LethalCompanyStatTracker {
             }
         }
 
-        private static FieldInfo ShotgunItemHitColliders_FieldInfo;
-
-        [HarmonyPatch(typeof(ShotgunItem), "ShootGun")]
         [HarmonyPostfix]
-        [HarmonyWrapSafe]
-        static void ShotgunShotPatch(ShotgunItem __instance) {
-            if (ShotgunItemHitColliders_FieldInfo == null) {
-                ShotgunItemHitColliders_FieldInfo = typeof(ShotgunItem).GetField("enemyColliders", BindingFlags.Instance | BindingFlags.NonPublic);
-            }
-
-            //still does not work
-            //todo: check if the field info is a null (yes, *again*)
-            var isNutcracker = __instance.isHeldByEnemy;
-            var caught = (RaycastHit[])ShotgunItemHitColliders_FieldInfo.GetValue(__instance);
-            foreach (var info in caught) {
-                if (info.transform != null) {
-                    if (info.transform.TryGetComponent<IHittable>(out IHittable comp)) {
-                        if (comp is PlayerControllerB) {
-                            StatisticsTracker.Instance.OnPlayerDeath(isNutcracker ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE);
-                            StatisticsTracker.Instance.cumulativeData.causesOfDeath[DeathCauseConstants.TURRET] -= 1;
-                        }
-                    }
-                }
-            }
-        }
-
-        static void ShovelAndSignsHitPatch() {
-
-        }
-
-        [HarmonyPatch(typeof(PlayerControllerB), "IHittable.Hit")]
-        [HarmonyPostfix]
-        [HarmonyWrapSafe]
-        static void NutcrackerShotgunAndFriendlyFirePatch(PlayerControllerB __instance, PlayerControllerB playerWhoHit) {
-            var player = __instance;
-            if (player == null)
-                return;
-
-            if (player.isPlayerDead || player.health <= 0) {
-                var cause = playerWhoHit == null ? DeathCauseConstants.NUTCRACKER : DeathCauseConstants.FRIENDLY_FIRE;
-                StatisticsTracker.Instance.OnPlayerDeath(cause);//, player.playerClientId);
+        [HarmonyPatch(typeof(PlayerControllerB), "DamagePlayerFromOtherClientClientRpc")]
+        static void FriendlyFirePatch(int newHealthAmount) {
+            if (newHealthAmount <= 0) {
+                StatTrackerMod.Logger.LogMessage("Player killed with friendly fire");
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.FRIENDLY_FIRE);
             }
         }
 
@@ -188,16 +155,22 @@ namespace LethalCompanyStatTracker {
             }
         }
 
+        private static FieldInfo lootbugHitTimer_FInfo;
+
         [HarmonyPatch(typeof(HoarderBugAI), "OnCollideWithPlayer")]
         [HarmonyPrefix]
         [HarmonyWrapSafe]
         static void LootbugAIPatch(HoarderBugAI __instance, Collider other) {
-            var controller = other.GetComponent<PlayerControllerB>();
+            var controller = __instance.MeetsStandardPlayerCollisionConditions(other);
             if (controller == null)
                 return;
 
-            if (controller.health <= 0 || controller.isPlayerDead && CanBeKilled(controller, __instance)) {
-                HandleKill(DeathCauseConstants.HOARDING_BUG, controller, __instance);
+            if (lootbugHitTimer_FInfo == null)
+                lootbugHitTimer_FInfo = typeof(HoarderBugAI).GetField("timeSinceHittingPlayer", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            var timer = (float)lootbugHitTimer_FInfo.GetValue(__instance);
+            if (timer >= 0.5f && !controller.isPlayerDead && controller.health - 30 <= 0f && controller.criticallyInjured) {
+                StatisticsTracker.Instance.OnPlayerDeath(DeathCauseConstants.HOARDING_BUG);
             }
         }
 
@@ -290,7 +263,7 @@ namespace LethalCompanyStatTracker {
                         }
 
                     case CauseOfDeath.Gunshots: {
-                            cause = DeathCauseConstants.TURRET;
+                            cause = DeathCauseConstants.GUNSHOTS;
                             break;
                         }
                     case CauseOfDeath.Abandoned: {
