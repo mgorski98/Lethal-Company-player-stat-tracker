@@ -37,6 +37,7 @@ namespace LethalCompanyStatTracker {
             public DefaultDict<string, int> enemiesKilled = new DefaultDict<string, int>(0);
             public DefaultDict<string, ItemData> allSoldItems = new DefaultDict<string, ItemData>(() => new ItemData());
             public DefaultDict<string, ItemData> allBoughtItems = new DefaultDict<string, ItemData>(() => new ItemData());
+            public DefaultDict<string, int> deathsOnMoons = new DefaultDict<string, int>(0);
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
             public int highestQuotaReached = 0;
@@ -56,6 +57,7 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, int> enemiesKilled;
             public Dictionary<string, ItemData> allSoldItems;
             public Dictionary<string, ItemData> allBoughtItems;
+            public Dictionary<string, int> deathsOnMoons;
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
             public int highestQuotaReached = 0;
@@ -73,6 +75,7 @@ namespace LethalCompanyStatTracker {
                 enemiesKilled = new Dictionary<string, int>(data.enemiesKilled);
                 allSoldItems = new Dictionary<string, ItemData>(data.allSoldItems);
                 allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
+                deathsOnMoons = new Dictionary<string, int>(data.deathsOnMoons);
                 currentSuccessfulMissionStreak = data.currentSuccessfulMissionStreak;
                 bestMissionStreak = data.bestMissionStreak;
                 highestQuotaReached = data.highestQuotaReached;
@@ -94,6 +97,7 @@ namespace LethalCompanyStatTracker {
                 data.allBoughtItems.CopyFrom(this.allBoughtItems);
                 data.enemiesKilled.CopyFrom(this.enemiesKilled);
                 data.causesOfDeath.CopyFrom(this.causesOfDeath);
+                data.deathsOnMoons.CopyFrom(this.deathsOnMoons);
                 data.currentSuccessfulMissionStreak = this.currentSuccessfulMissionStreak;
                 data.bestMissionStreak = this.bestMissionStreak;
                 data.highestQuotaReached = this.highestQuotaReached;
@@ -343,7 +347,11 @@ namespace LethalCompanyStatTracker {
             var old = cumulativeData.causesOfDeath[causeOfDeath_Name];
             cumulativeData.causesOfDeath[causeOfDeath_Name] += 1;
 
+            //todo: store the information on which moon the death occurred
+            var moon = RoundManager.Instance.currentLevel;
+            cumulativeData.deathsOnMoons[moon.PlanetName]++;
             StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {cumulativeData.causesOfDeath[causeOfDeath_Name]}, old: {old}");
+            StatTrackerMod.Logger.LogMessage($"death occurred on {moon.PlanetName} moon");
         }
 
         public void OnEnemyKilled(string enemyKilledName) {
