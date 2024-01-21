@@ -312,11 +312,11 @@ namespace LethalCompanyStatTracker {
 
         public void ShowStreakLostInfo(bool playersWereDead) {
             StatTrackerMod.Logger.LogMessage($"all players dead? {playersWereDead}");
-            if (cumulativeData.currentSuccessfulMissionStreak <= 0) {
-                StatTrackerMod.Logger.LogMessage("No successful missions yet, skipping...");
-                return;
-            }
             if (playersWereDead) {
+                if (cumulativeData.currentSuccessfulMissionStreak <= 0) {
+                    StatTrackerMod.Logger.LogMessage("No successful missions yet, skipping...");
+                    return;
+                }
                 string header;
                 string body;
                 if (cumulativeData.currentSuccessfulMissionStreak > cumulativeData.bestMissionStreak) {

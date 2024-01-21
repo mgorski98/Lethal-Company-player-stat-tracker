@@ -111,7 +111,7 @@ namespace LethalCompanyStatTracker {
         [HarmonyPatch(typeof(PlayerControllerB), "UpdatePlayerPositionClientRpc")]
         static void OnPlayerMoved() {
             Tracker.cumulativeData.totalSteps++;
-            StatTrackerMod.Logger.LogMessage($"Player moved! updating stats");
+            //StatTrackerMod.Logger.LogMessage($"Player moved! updating stats");
         }
 
         //[HarmonyWrapSafe]
