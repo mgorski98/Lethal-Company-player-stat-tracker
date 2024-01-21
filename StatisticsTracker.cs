@@ -236,26 +236,6 @@ namespace LethalCompanyStatTracker {
             StatTrackerMod.Logger.LogMessage($"Stored {obj.Length - bodies} sold items.");
         }
 
-        public void HandleEndOfGame() {
-            //todo: also reset some things if applicable
-            var stats = StartOfRound.Instance.gameStats;
-            StatTrackerMod.Logger.LogMessage($"Fetching game stats, old values: steps:{cumulativeData.totalSteps}, jumps:{cumulativeData.totalJumps},damage:{cumulativeData.totalDamage}");
-            cumulativeData.totalSteps += stats.allStepsTaken;
-            foreach (var stat in stats.allPlayerStats) {
-                cumulativeData.totalJumps += stat.jumps;
-                cumulativeData.totalDamage += stat.damageTaken;
-            }
-            cumulativeData.totalTimesQuotaFulfilled += TimeOfDay.Instance.timesFulfilledQuota;
-            StatTrackerMod.Logger.LogMessage($"Fetching game stats, new values: steps:{cumulativeData.totalSteps}, jumps:{cumulativeData.totalJumps},damage:{cumulativeData.totalDamage}");
-        }
-
-        public void UpdateCreditsSpent(int oldCredits, int newCredits) {
-            var diff = newCredits - oldCredits;
-            if (diff < 0) {
-                cumulativeData.totalMoneySpent = Mathf.Abs(diff);
-            }
-        }
-
         private TextMeshProUGUI ProfitWindowTitle;
         public void ChangeProfitWindowTitle(string newTitle) {
             if (ProfitWindowTitle == null) {
@@ -328,8 +308,15 @@ namespace LethalCompanyStatTracker {
 
             var data = cumulativeData.moonExpeditionsData[planetName];
             data.WeatherExpeditions[weather] += 1;
+        }
 
-            if (StartOfRound.Instance.allPlayersDead) {
+        public void ShowStreakLostInfo(bool playersWereDead) {
+            StatTrackerMod.Logger.LogMessage($"all players dead? {playersWereDead}");
+            if (cumulativeData.currentSuccessfulMissionStreak <= 0) {
+                StatTrackerMod.Logger.LogMessage("No successful missions yet, skipping...");
+                return;
+            }
+            if (playersWereDead) {
                 string header;
                 string body;
                 if (cumulativeData.currentSuccessfulMissionStreak > cumulativeData.bestMissionStreak) {
@@ -343,8 +330,10 @@ namespace LethalCompanyStatTracker {
                 HUDManager.Instance.DisplayTip(header, body);
                 cumulativeData.currentSuccessfulMissionStreak = 0;
             } else {
-                cumulativeData.currentSuccessfulMissionStreak++;
-                StatTrackerMod.Logger.LogMessage($"Current streak: {cumulativeData.currentSuccessfulMissionStreak}");
+                if (!RoundManager.Instance.currentLevel.IsCompanyBuilding()) {
+                    cumulativeData.currentSuccessfulMissionStreak++;
+                    StatTrackerMod.Logger.LogMessage($"Current streak: {cumulativeData.currentSuccessfulMissionStreak}");
+                }
             }
         }
 

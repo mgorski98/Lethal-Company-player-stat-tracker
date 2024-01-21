@@ -96,6 +96,7 @@
     <Compile Include="DefaultDict.cs" />
     <Compile Include="DepositItemsDeskPatch.cs" />
     <Compile Include="EnemyKillsTrackerPatch.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="MethodRedirect.cs" />
     <Compile Include="PlayerSpawnStatTrackerPatch.cs" />
     <Compile Include="Plugin.cs" />

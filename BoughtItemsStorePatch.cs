@@ -28,9 +28,7 @@ namespace LethalCompanyStatTracker {
 
             FetchTotalCostInfoIfNull();
             int totalCostOfItems = (int)totalCostOfItems_FieldInfo.GetValue(__instance);
-            if (node.shipUnlockableID != -1) {
-                var unlockable = StartOfRound.Instance.unlockablesList.unlockables[node.shipUnlockableID];
-                
+            if (node.shipUnlockableID != -1) {//it works, im scared to touch this :D
             } else {
                 var newItems = __instance.orderedItemsFromTerminal.Skip(BoughtItemsSnapshot.Count).ToArray();
                 StatisticsTracker.Instance.StoreShopBoughtItems(newItems, __instance, totalCostOfItems);

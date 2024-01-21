@@ -16,7 +16,7 @@ namespace LethalCompanyStatTracker {
             public const string DOG = "Eyeless dog";
             public const string GIANT = "Forest giant";
             public const string SNARE_FLEA = "Snare flea";
-            public const string GRAVITY = "Falling";
+            public const string GRAVITY = "Gravity";
             public const string WORM = "Earth leviathan";
             public const string GIRL = "Ghost girl";
             public const string BABOON = "Baboon hawk";
@@ -26,8 +26,8 @@ namespace LethalCompanyStatTracker {
             public const string NUTCRACKER = "Nutcracker";
             public const string SPIDER = "Bunker spider";
             public const string NOT_THE_BEES = "Circuit bees";
-            public const string MINE = "Landmines & Lightning"; // because they use the same explosion particles it is almost impossible to differentiate which one killed the player
-            public const string GUNSHOTS = "Gunshots (nutcracker & turrets)";
+            public const string BLAST = "Explosions"; // because they use the same explosion particles it is almost impossible to differentiate which one killed the player
+            public const string GUNSHOTS = "Gunshots";
             public const string EXT_LADDER = "Extension ladder";
             public const string COMPANY_MONSTER = "Jeb (AKA Company Monster)";
             public const string DROWNING = "Drowning";
@@ -41,8 +41,6 @@ namespace LethalCompanyStatTracker {
         private static Dictionary<int, (PlayerControllerB, EnemyAI)> EnemyKillDict = new Dictionary<int, (PlayerControllerB, EnemyAI)>();
         private static Dictionary<int, PlayerControllerB> MaskKills = new Dictionary<int, PlayerControllerB>();
         private const int COIL_HEAD_KILL_ANIM_ID = 2;
-
-        private static ShotgunItem currentShotgunInstance;
 
         [HarmonyPatch(typeof(JesterAI), "killPlayerAnimation")]
         [HarmonyPostfix]
@@ -254,7 +252,7 @@ namespace LethalCompanyStatTracker {
                 string cause = "";
                 switch (causeOfDeath) {
                     case CauseOfDeath.Blast: {
-                            cause = DeathCauseConstants.MINE;
+                            cause = DeathCauseConstants.BLAST;
                             break;
                     }
                     case CauseOfDeath.Drowning: {
