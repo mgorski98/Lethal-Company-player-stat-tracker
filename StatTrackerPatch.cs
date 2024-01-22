@@ -47,6 +47,7 @@ namespace LethalCompanyStatTracker {
             Tracker.ProcessOnMoonQuit();
             Tracker.UpdatePlanetExpeditionData(RoundManager.Instance.currentLevel);
             Tracker.UpdateHighestQuotaReached();
+            Tracker.StorePlayerDeaths();
         }
 
         [HarmonyPostfix]

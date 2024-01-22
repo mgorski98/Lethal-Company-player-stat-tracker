@@ -124,6 +124,14 @@ namespace LethalCompanyStatTracker {
 
         public static StatisticsTracker Instance { get; private set; } = null;
 
+        public Dictionary<int, string> currentPlayerKills = new Dictionary<int, string>();
+        public SelectableLevel currentLevel;
+
+        public void SetPlayerKilled(int id, string cause) {
+            currentPlayerKills[id] = cause;
+            StatTrackerMod.Logger.LogMessage($"set player {id} to death cause {cause}");
+        }
+
         private void Awake() {
             if (Instance == null) {
                 Instance = this;
@@ -146,6 +154,7 @@ namespace LethalCompanyStatTracker {
         }
 
         public void SnapshotCollectedItemsOnMoonStart() {
+            currentLevel = RoundManager.Instance.currentLevel;
             itemsSnapshot.Clear();
             var shipOrPlayerScrapItems = GetAllCollectedScrap();
             foreach (var item in shipOrPlayerScrapItems) {
@@ -210,6 +219,13 @@ namespace LethalCompanyStatTracker {
             StatTrackerMod.Logger.LogMessage("Showing collected items dialog");
             HUDManager.Instance.DisplayCreditsEarning(creditsEarned, items, -1);
             StartCoroutine(ReturnToOldProfitWindowTitle());
+        }
+
+        public void StorePlayerDeaths() {
+            foreach (var kvp in currentPlayerKills) {
+                OnPlayerDeath(kvp.Value);
+            }
+            currentPlayerKills.Clear();
         }
 
         public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal, int totalCost) {
@@ -347,7 +363,6 @@ namespace LethalCompanyStatTracker {
             var old = cumulativeData.causesOfDeath[causeOfDeath_Name];
             cumulativeData.causesOfDeath[causeOfDeath_Name] += 1;
 
-            //todo: store the information on which moon the death occurred
             var moon = RoundManager.Instance.currentLevel;
             cumulativeData.deathsOnMoons[moon.PlanetName]++;
             StatTrackerMod.Logger.LogMessage($"death caused by: {causeOfDeath_Name}. Current: {cumulativeData.causesOfDeath[causeOfDeath_Name]}, old: {old}");

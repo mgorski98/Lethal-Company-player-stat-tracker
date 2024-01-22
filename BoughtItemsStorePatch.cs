@@ -11,28 +11,19 @@ namespace LethalCompanyStatTracker {
 
         private static List<int> BoughtItemsSnapshot = new List<int>();
 
-        [HarmonyPatch("LoadNewNodeIfAffordable")]
-        [HarmonyPrefix]
-        static void SnapshotBeforeBuyingNewItems(Terminal __instance, TerminalNode node) {
-            if (node.buyItemIndex == -1)
-                return;
-            BoughtItemsSnapshot.Clear();
-            BoughtItemsSnapshot.AddRange(__instance.orderedItemsFromTerminal);
-        }
-
-        [HarmonyPatch("LoadNewNodeIfAffordable")]
+        //this should only work when you're buying
+        [HarmonyPatch("BuyItemsServerRpc")]
         [HarmonyPostfix]
-        static void StoreBoughtItems(Terminal __instance, TerminalNode node) {
-            if (node.buyItemIndex == -1)
-                return;
-
+        static void StoreBoughtItems(Terminal __instance, int[] boughtItems) {
             FetchTotalCostInfoIfNull();
             int totalCostOfItems = (int)totalCostOfItems_FieldInfo.GetValue(__instance);
-            if (node.shipUnlockableID != -1) {//it works, im scared to touch this :D
-            } else {
-                var newItems = __instance.orderedItemsFromTerminal.Skip(BoughtItemsSnapshot.Count).ToArray();
-                StatisticsTracker.Instance.StoreShopBoughtItems(newItems, __instance, totalCostOfItems);
-            }
+            StatisticsTracker.Instance.StoreShopBoughtItems(boughtItems, __instance, totalCostOfItems);
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch("LoadNewNodeIfAffordable")]
+        static void StoreBoughtItems_ServerSide(Terminal __instance) {
+
         }
 
         [HarmonyPatch(typeof(StartOfRound), "UnlockShipObject")]
