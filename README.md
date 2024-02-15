@@ -1,5 +1,7 @@
 # Lethal Company Employee Evaluation mod
 
+## NOTE: This mod is no longer being developed. If someone wants to fork it and expand on it - you are free to do it, just remember to credit me :) Maybe I will finish this in the future.
+
 A mod to track your own statistics, as well as your team's. Have you ever wanted to know how many Tattered Metal Sheets you collected so far or could you host a hell of a party with all the pickles you collected? Now you can!
 
 ## Features
