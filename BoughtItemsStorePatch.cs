@@ -8,22 +8,26 @@ namespace LethalCompanyStatTracker {
     internal class BoughtItemsStorePatch {
 
         private static FieldInfo totalCostOfItems_FieldInfo;
-
         private static List<int> BoughtItemsSnapshot = new List<int>();
 
-        //this should only work when you're buying
-        [HarmonyPatch("BuyItemsServerRpc")]
-        [HarmonyPostfix]
-        static void StoreBoughtItems(Terminal __instance, int[] boughtItems) {
-            FetchTotalCostInfoIfNull();
-            int totalCostOfItems = (int)totalCostOfItems_FieldInfo.GetValue(__instance);
-            StatisticsTracker.Instance.StoreShopBoughtItems(boughtItems, __instance, totalCostOfItems);
+        [HarmonyPatch("LoadNewNodeIfAffordable")]
+        [HarmonyPrefix]
+        static void SnapshotBeforeBuyingNewItems(Terminal __instance, TerminalNode node) {
+            if (node.buyItemIndex == -1)
+                return;
+            BoughtItemsSnapshot.Clear();
+            BoughtItemsSnapshot.AddRange(__instance.orderedItemsFromTerminal);
         }
 
-        [HarmonyPostfix]
+        //this should only work when you're buying
         [HarmonyPatch("LoadNewNodeIfAffordable")]
-        static void StoreBoughtItems_ServerSide(Terminal __instance) {
-
+        [HarmonyPostfix]
+        static void StoreBoughtItems(Terminal __instance, TerminalNode node) {
+            FetchTotalCostInfoIfNull();
+            if (node.shipUnlockableID == -1) {
+                StatisticsTracker.Instance.StoreShopBoughtItems(__instance.orderedItemsFromTerminal.Skip(BoughtItemsSnapshot.Count).ToArray(), __instance);
+                BoughtItemsSnapshot.Clear();
+            }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "UnlockShipObject")]
@@ -42,6 +46,32 @@ namespace LethalCompanyStatTracker {
             data.Count++;
             data.TotalPrice += totalCost;
             StatTrackerMod.Logger.LogMessage($"Stored unlockable named {item.unlockableName}, costing {totalCost}");
+        }
+
+        private static FieldInfo ItemsToDeliver_FieldInfo;
+
+        [HarmonyPatch(typeof(ItemDropship), "Start")]
+        [HarmonyPostfix]
+        static void FetchBoughtItemsFromItemDropship(ItemDropship __instance) {
+            if (__instance.IsServer)
+                return;
+            if (ItemsToDeliver_FieldInfo == null)
+                ItemsToDeliver_FieldInfo = typeof(ItemDropship).GetField("itemsToDeliver", BindingFlags.Instance | BindingFlags.NonPublic);
+            var itemsToDeliver_indices = ItemsToDeliver_FieldInfo.GetValue(__instance) as List<int>;
+            var terminal = UnityEngine.Object.FindObjectOfType(typeof(Terminal));
+            StatisticsTracker.Instance.StoreShopBoughtItems(itemsToDeliver_indices.ToArray(), (Terminal)terminal);
+        }
+
+        [HarmonyPatch(typeof(Terminal), "SyncGroupCreditsClientRpc")]
+        [HarmonyPrefix]
+        static void UpdateCreditsSpent(Terminal __instance, int newGroupCredits) {
+            var diff = __instance.groupCredits - newGroupCredits;
+            if (diff < 0) {
+                //money was spent
+                var value = UnityEngine.Mathf.Abs(diff);
+                StatisticsTracker.Instance.cumulativeData.totalMoneySpent += value;
+                StatTrackerMod.Logger.LogMessage($"Spent {value} credits");
+            }
         }
 
         static void FetchTotalCostInfoIfNull() {

@@ -38,7 +38,7 @@ namespace LethalCompanyStatTracker.TerminalStuff {
                 Description = "Shows potential causes of death of our employees. How tragic."
             }, "stats");
 
-            AddCommand("moons", new CommandInfo() {
+            AddCommand("expeditions", new CommandInfo() {
                 DisplayTextSupplier = () => FormatMoonExpeditions(StatisticsTracker.Instance.cumulativeData.moonExpeditionsData, StatisticsTracker.Instance.cumulativeData.bestMissionStreak),
                 Category = "Stats",
                 Description = "Which of the moons were visited and how bad the weather was."
@@ -219,10 +219,9 @@ namespace LethalCompanyStatTracker.TerminalStuff {
 
                 var mostBought_pair = src.OrderByDescending(kvp => kvp.Value.Count).First();
                 var leastBought_pair = src.OrderBy(kvp => kvp.Value.Count).First();
-                var totalCreditsSpent = src.Values.Sum(v => v.TotalPrice);
                 sb.Append("Most bought item: ").Append(mostBought_pair.Key).Append(", bought ").Append(mostBought_pair.Value.Count).Append(" times\n");
                 sb.Append("Least bought item: ").Append(leastBought_pair.Key).Append(", bought ").Append(leastBought_pair.Value.Count).Append(" times\n");
-                sb.Append("Total bought: ").Append(src.Values.Sum(d => d.Count)).Append(" items, worth a total of ").Append(totalCreditsSpent).Append(" credits\n");
+                //sb.Append("Total bought: ").Append(src.Values.Sum(d => d.Count)).Append(" items, worth a total of ").Append(totalCreditsSpent).Append(" credits\n");
             }
 
             return sb.ToString();

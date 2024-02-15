@@ -38,9 +38,11 @@ namespace LethalCompanyStatTracker {
             public DefaultDict<string, ItemData> allSoldItems = new DefaultDict<string, ItemData>(() => new ItemData());
             public DefaultDict<string, ItemData> allBoughtItems = new DefaultDict<string, ItemData>(() => new ItemData());
             public DefaultDict<string, int> deathsOnMoons = new DefaultDict<string, int>(0);
+            public DefaultDict<string, DefaultDict<string, ItemData>> scrapCollectedOnMoons = new DefaultDict<string, DefaultDict<string, ItemData>>(() => new DefaultDict<string, ItemData>(() => new ItemData()));
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
             public int highestQuotaReached = 0;
+            public int highestQuotaFulfilled = 0;
             public long totalJumps = 0;
             public long totalSteps = 0;
             public long totalDamage = 0;
@@ -58,15 +60,18 @@ namespace LethalCompanyStatTracker {
             public Dictionary<string, ItemData> allSoldItems;
             public Dictionary<string, ItemData> allBoughtItems;
             public Dictionary<string, int> deathsOnMoons;
+            public Dictionary<string, Dictionary<string, ItemData>> scrapCollectedOnMoons;
+            public int bodiesInsured = 0;
+            public int totalTimesQuotaFulfilled = 0;
             public int currentSuccessfulMissionStreak = 0;
             public int bestMissionStreak = 0;
+            //these are local player only
             public int highestQuotaReached = 0;
+            public int highestQuotaFulfilled = 0;
             public long totalJumps = 0;
             public long totalSteps = 0;
             public long totalDamage = 0;
             public long totalMoneySpent = 0;
-            public int totalTimesQuotaFulfilled = 0;
-            public int bodiesInsured = 0;
 
             public SerializableStats(PlayerStatisticsData data) {
                 allCollectedItems = new Dictionary<string, ItemData>(data.allCollectedItems);
@@ -76,15 +81,20 @@ namespace LethalCompanyStatTracker {
                 allSoldItems = new Dictionary<string, ItemData>(data.allSoldItems);
                 allBoughtItems = new Dictionary<string, ItemData>(data.allBoughtItems);
                 deathsOnMoons = new Dictionary<string, int>(data.deathsOnMoons);
+                scrapCollectedOnMoons = new Dictionary<string, Dictionary<string, ItemData>>();
                 currentSuccessfulMissionStreak = data.currentSuccessfulMissionStreak;
                 bestMissionStreak = data.bestMissionStreak;
                 highestQuotaReached = data.highestQuotaReached;
+                highestQuotaFulfilled = data.highestQuotaFulfilled;
                 totalSteps = data.totalSteps;
                 totalJumps = data.totalJumps;
                 totalDamage = data.totalDamage;
                 totalMoneySpent = data.totalMoneySpent;
                 totalTimesQuotaFulfilled = data.totalTimesQuotaFulfilled;
                 bodiesInsured = data.bodiesInsured;
+                foreach (var kvp in data.scrapCollectedOnMoons) {
+                    scrapCollectedOnMoons[kvp.Key] = new Dictionary<string, ItemData>(kvp.Value);
+                }
             }
 
             public SerializableStats() { } //because deserialization fails when this is not present
@@ -101,18 +111,22 @@ namespace LethalCompanyStatTracker {
                 data.currentSuccessfulMissionStreak = this.currentSuccessfulMissionStreak;
                 data.bestMissionStreak = this.bestMissionStreak;
                 data.highestQuotaReached = this.highestQuotaReached;
+                data.highestQuotaFulfilled = this.highestQuotaFulfilled;
                 data.totalDamage = totalDamage;
                 data.totalSteps = totalSteps;
                 data.totalJumps = totalJumps;
                 data.totalMoneySpent = totalMoneySpent;
                 data.totalTimesQuotaFulfilled = totalTimesQuotaFulfilled;
                 data.bodiesInsured = bodiesInsured;
+                foreach (var kvp in this.scrapCollectedOnMoons) {
+                    data.scrapCollectedOnMoons[kvp.Key].CopyFrom(kvp.Value);
+                }
                 return data;
             }
         }
 
 
-        private HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
+        private readonly HashSet<GrabbableObject> itemsSnapshot = new HashSet<GrabbableObject>();
         public HashSet<GrabbableObject> currentlyCollected = new HashSet<GrabbableObject>();
 
         public PlayerStatisticsData cumulativeData = new PlayerStatisticsData();
@@ -185,12 +199,16 @@ namespace LethalCompanyStatTracker {
         public void ProcessOnMoonQuit() {
             var allItems = GetAllCollectedScrap();
             var newItems = allItems.Where(item => !itemsSnapshot.Contains(item) && !currentlyCollected.Contains(item)).ToArray();
-
+            var currentMoonName = RoundManager.Instance.currentLevel.PlanetName;
             foreach (var item in newItems) {
                 var name = item.itemProperties.itemName;
                 var data = cumulativeData.allCollectedItems[name];
                 data.Count++;
                 data.TotalPrice += item.scrapValue;
+
+                var dataOnMoon = cumulativeData.scrapCollectedOnMoons[currentMoonName][name];
+                dataOnMoon.Count++;
+                dataOnMoon.TotalPrice += item.scrapValue;
             }
             currentNewItems = newItems;
             var creditsEarned = newItems.Sum(i => i.scrapValue);
@@ -223,22 +241,23 @@ namespace LethalCompanyStatTracker {
 
         public void StorePlayerDeaths() {
             foreach (var kvp in currentPlayerKills) {
+                if (!StartOfRound.Instance.allPlayerScripts[kvp.Key].isPlayerDead)
+                    continue;
+
                 OnPlayerDeath(kvp.Value);
             }
             currentPlayerKills.Clear();
         }
 
-        public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal, int totalCost) {
+        public void StoreShopBoughtItems(int[] boughtItems, Terminal terminal) {
             if (boughtItems.Length <= 0)
                 return;
-            var costPerItem = totalCost / boughtItems.Length;
             foreach (var itemIndex in boughtItems) {
                 var item = terminal.buyableItemsList[itemIndex];
                 var data = cumulativeData.allBoughtItems[item.itemName];
                 data.Count++;
-                data.TotalPrice += costPerItem;
             }
-            StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items, worth {totalCost}");
+            StatTrackerMod.Logger.LogMessage($"Stored {boughtItems.Length} bought items");
         }
 
         public void StoreSoldItems(GrabbableObject[] obj) {

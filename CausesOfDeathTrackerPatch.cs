@@ -162,7 +162,8 @@ namespace LethalCompanyStatTracker {
             if (controller == null)
                 return;
 
-            Tracker.SetPlayerKilled((int)controller.playerClientId, DeathCauseConstants.HOARDING_BUG);
+            if (controller.isPlayerDead || controller.health - 30 <= 0)
+                Tracker.SetPlayerKilled((int)controller.playerClientId, DeathCauseConstants.HOARDING_BUG);
         }
 
         [HarmonyPatch(typeof(BaboonBirdAI), "killPlayerAnimation")]

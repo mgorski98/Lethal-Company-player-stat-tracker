@@ -50,6 +50,7 @@ namespace LethalCompanyStatTracker {
             Tracker.StorePlayerDeaths();
         }
 
+        private static int currentQuota = 0;
         [HarmonyPostfix]
         [HarmonyWrapSafe]
         [HarmonyPatch(typeof(TimeOfDay), "SyncNewProfitQuotaClientRpc")]
@@ -58,12 +59,19 @@ namespace LethalCompanyStatTracker {
             if (newProfitQuota > highestQuota) {
                 Tracker.cumulativeData.highestQuotaReached = newProfitQuota;
                 Tracker.cumulativeData.totalTimesQuotaFulfilled++;
-                StatTrackerMod.Logger.LogMessage($"Setting new highest quota: {newProfitQuota}");
+                StatTrackerMod.Logger.LogMessage($"Setting new highest quota reached: {newProfitQuota}");
+            }
+
+            var highestFulfilled = Tracker.cumulativeData.highestQuotaFulfilled;
+            if (currentQuota > highestFulfilled) { 
+                Tracker.cumulativeData.highestQuotaFulfilled = currentQuota;
+                currentQuota = newProfitQuota;
+                StatTrackerMod.Logger.LogMessage($"Setting new highest quota fulfilled: {Tracker.cumulativeData.highestQuotaFulfilled}");
             }
         }
 
+
         //this method adds every item dropped in the ship to the storage
-        //todo: make sure this doesn't fire on the Company building
         [HarmonyPatch(typeof(HUDManager), "AddNewScrapFoundToDisplay")]
         [HarmonyPostfix]
         [HarmonyWrapSafe]
@@ -79,6 +87,10 @@ namespace LethalCompanyStatTracker {
             data.Count++;
             data.TotalPrice += GObject.scrapValue;
 
+            var dataOnMoon = Tracker.cumulativeData.scrapCollectedOnMoons[RoundManager.Instance.currentLevel.PlanetName][GObject.itemProperties.itemName];
+            dataOnMoon.Count++;
+            dataOnMoon.TotalPrice += GObject.scrapValue;
+
             Tracker.currentlyCollected.Add(GObject);
             StatTrackerMod.Logger.LogMessage($"Collected {GObject.itemProperties.itemName}, worth {GObject.scrapValue}");
         }
@@ -89,6 +101,7 @@ namespace LethalCompanyStatTracker {
         static void OnEndOfRound(int bodiesInsured) {
             Tracker.cumulativeData.bodiesInsured += bodiesInsured;
             StatTrackerMod.Logger.LogMessage($"Storing {bodiesInsured} collected bodies");
+            currentQuota = TimeOfDay.Instance.profitQuota;
         }
 
         [HarmonyWrapSafe]
